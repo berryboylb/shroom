@@ -1,0 +1,21 @@
+# Go
+/backend/bin
+/backend/tmp
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Environment
+.env
+.env.production
+.DS_Store

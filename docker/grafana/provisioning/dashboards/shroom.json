@@ -1,0 +1,30 @@
+{
+  "title": "Shroom API Overview",
+  "uid": "shroom-api",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Total HTTP Requests",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(shroom_http_requests_total[1m])) by (status)", "legendFormat": "HTTP {{status}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "P95 API Latency (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(shroom_http_duration_seconds_bucket[1m])) by (le)) * 1000", "legendFormat": "P95 Latency" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by Path",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(shroom_http_requests_total[1m])) by (path)", "legendFormat": "{{path}}" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+}
+
+/* Google Meet / Gen-Z Vibe LiveKit Overrides */
+.lk-video-conference {
+  --lk-bg: #f8fafc;
+  --lk-control-bar-bg: rgba(255, 255, 255, 0.85);
+  --lk-border-radius: 1rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  backdrop-filter: blur(12px);
+}
+.dark .lk-video-conference {
+  --lk-bg: #020617;
+  --lk-control-bar-bg: rgba(15, 23, 42, 0.85);
+}
+.lk-control-bar {
+  margin-bottom: 24px;
+  border-radius: 9999px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  display: inline-flex;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 8px 16px;
+}
+.lk-button {
+  border-radius: 9999px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lk-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.lk-participant-tile {
+  border-radius: 1.5rem !important;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  border: 4px solid white;
+}
+.dark .lk-participant-tile {
+  border-color: #0f172a;
+}
+.lk-chat {
+  border-radius: 1.5rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255,255,255,0.5);
+}
