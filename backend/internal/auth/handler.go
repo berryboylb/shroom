@@ -43,7 +43,7 @@ func (h *Handler) HandleGuestLogin(w http.ResponseWriter, r *http.Request) {
 		Name:     "refresh_token",
 		Value:    token, // MVP: reuse token
 		HttpOnly: true,
-		Secure:   false, // Set true in production
+		Secure:   true,
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour),
 	})

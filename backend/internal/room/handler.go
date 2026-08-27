@@ -47,7 +47,7 @@ func (h *Handler) HandleJoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims, ok := r.Context().Value("claims").(*localauth.Claims)
+	claims, ok := localauth.GetClaims(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
