@@ -54,6 +54,6 @@ jobs:
           script: |
             cd /var/www/shroom
             git pull origin main
-            sudo docker-compose -f docker-compose.prod.yml rm -fsv frontend backend
-            sudo docker-compose -f docker-compose.prod.yml build
-            sudo docker-compose -f docker-compose.prod.yml up -d
+            docker-compose -f docker-compose.prod.yml rm -fsv frontend backend
+            docker-compose -f docker-compose.prod.yml build
+            docker-compose -f docker-compose.prod.yml up -d
