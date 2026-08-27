@@ -40,17 +40,21 @@ jobs:
           version: latest
           working-directory: backend
 
-  build-docker:
+  deploy:
     needs: lint-and-typecheck
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Backend Image
-        working-directory: ./backend
-        run: docker build -t shroom-backend:latest -f Dockerfile .
-
-      - name: Build Frontend Image
-        working-directory: ./frontend
-        run: docker build -t shroom-frontend:latest -f Dockerfile .
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          # We run the exact sequence needed to bypass the legacy Docker Compose v1 bug
+          script: |
+            cd /var/www/shroom
+            git pull origin main
+            sudo docker-compose -f docker-compose.prod.yml rm -fsv frontend backend
+            sudo docker-compose -f docker-compose.prod.yml build
+            sudo docker-compose -f docker-compose.prod.yml up -d
