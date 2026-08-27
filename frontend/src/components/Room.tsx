@@ -8,7 +8,6 @@ import { NetworkHealthOverlay } from './NetworkHealthOverlay';
 import { DraggableRoomHeader } from './DraggableRoomHeader';
 import { EmojiReactions } from './EmojiReactions';
 import { ChimeController } from './ChimeController';
-import { ColorController } from './ColorController';
 import { VideoPresets } from 'livekit-client';
 
 interface RoomProps {
@@ -60,7 +59,6 @@ export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
         <DraggableRoomHeader roomId={roomId} />
         <EmojiReactions />
         <ChimeController />
-        <ColorController />
         
         <div className="flex-1 p-4 pb-0 h-full">
           <VideoConference />
