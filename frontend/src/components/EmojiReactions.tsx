@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useDataChannel, useLocalParticipant } from '@livekit/components-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SmilePlus, X } from 'lucide-react';
 
 interface Reaction {
   id: string;
@@ -12,27 +13,23 @@ const EMOJIS = ['🔥', '❤️', '👍', '🎉', '😂', '👀'];
 
 export function EmojiReactions() {
   const [reactions, setReactions] = useState<Reaction[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
   const { localParticipant } = useLocalParticipant();
 
-  // Handle incoming data channel messages
   useDataChannel((msg) => {
     try {
       const data = JSON.parse(new TextDecoder().decode(msg.payload));
       if (data.type === 'reaction') {
         spawnReaction(data.emoji);
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   });
 
   const spawnReaction = useCallback((emoji: string) => {
     const id = Math.random().toString(36).substr(2, 9);
-    // Random horizontal position near center-bottom
     const x = Math.random() * 100 - 50; 
     setReactions(prev => [...prev, { id, emoji, x }]);
     
-    // Cleanup after animation
     setTimeout(() => {
       setReactions(prev => prev.filter(r => r.id !== id));
     }, 2000);
@@ -40,12 +37,8 @@ export function EmojiReactions() {
 
   const sendReaction = useCallback((emoji: string) => {
     if (!localParticipant) return;
-    
     const payload = new TextEncoder().encode(JSON.stringify({ type: 'reaction', emoji }));
-    // 0 = RELIABLE, 1 = LOSSY
     localParticipant.publishData(payload, { reliable: false });
-    
-    // Spawn locally instantly for responsiveness
     spawnReaction(emoji);
   }, [localParticipant, spawnReaction]);
 
@@ -69,16 +62,44 @@ export function EmojiReactions() {
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex gap-1 sm:gap-2 max-w-[95vw] overflow-x-auto bg-slate-900/80 backdrop-blur-xl p-2 rounded-full border border-slate-700/50 shadow-2xl">
-        {EMOJIS.map(emoji => (
-          <button
-            key={emoji}
-            onClick={() => sendReaction(emoji)}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-slate-700/80 active:scale-90 transition-all text-lg sm:text-xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {emoji}
-          </button>
-        ))}
+      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {!isExpanded ? (
+            <motion.button
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              onClick={() => setIsExpanded(true)}
+              className="bg-slate-900/80 backdrop-blur-xl p-3 rounded-full border border-slate-700/50 shadow-2xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <SmilePlus className="w-6 h-6" />
+            </motion.button>
+          ) : (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="flex items-center gap-1 sm:gap-2 max-w-[95vw] overflow-x-auto bg-slate-900/80 backdrop-blur-xl p-2 rounded-full border border-slate-700/50 shadow-2xl pr-4"
+            >
+              {EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => sendReaction(emoji)}
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-slate-700/80 active:scale-90 transition-all text-lg sm:text-xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {emoji}
+                </button>
+              ))}
+              <div className="w-px h-6 bg-slate-700/50 mx-1"></div>
+              <button 
+                onClick={() => setIsExpanded(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/80 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </>
   );
