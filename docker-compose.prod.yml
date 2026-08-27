@@ -38,6 +38,9 @@ services:
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret
       - JWT_SECRET=prod_secret_change_me
+    environment:
+      - SITE_ADDRESS=${SITE_ADDRESS:-:80}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,6 +68,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - SITE_ADDRESS=${SITE_ADDRESS:-:80}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
     depends_on:
       - backend
     restart: unless-stopped
