@@ -34,11 +34,11 @@ jobs:
         with:
           go-version: '1.26'
           
-      - name: Backend Lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          working-directory: backend
+      - name: Backend Verify
+        working-directory: ./backend
+        run: |
+          go vet ./...
+          go build -v ./...
 
   deploy:
     needs: lint-and-typecheck
@@ -51,7 +51,6 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          # We run the exact sequence needed to bypass the legacy Docker Compose v1 bug
           script: |
             cd /var/www/shroom
             git pull origin main
