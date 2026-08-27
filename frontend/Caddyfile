@@ -10,23 +10,26 @@
         Referrer-Policy "strict-origin-when-cross-origin"
     }
 
-    # Proxy APIs to Go Backend
-    handle /api/* {
-        reverse_proxy backend:8080
-    }
-    handle /ws/* {
+    @api path /api /api/*
+    handle @api {
         reverse_proxy backend:8080
     }
 
-    # Proxy WebRTC Signaling to LiveKit
-    handle /rtc/* {
+    @ws path /ws /ws/*
+    handle @ws {
+        reverse_proxy backend:8080
+    }
+
+    @rtc path /rtc /rtc/*
+    handle @rtc {
         reverse_proxy livekit:7880
     }
-    handle /twirp/* {
+
+    @twirp path /twirp /twirp/*
+    handle @twirp {
         reverse_proxy livekit:7880
     }
     
-    # Only apply static file routing if it didn't match the API/WS handlers above
     handle {
         try_files {path} /index.html
         file_server
