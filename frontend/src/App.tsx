@@ -189,7 +189,7 @@ export default function App() {
             Shroom
           </h1>
           <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
-            Jump in. No friction.
+            Jump in. Zero friction. 🚀
           </p>
         </div>
 
