@@ -1,49 +1,77 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Mic, MicOff, Video, VideoOff, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, MicOff, Video, VideoOff, ArrowRight, Settings2 } from 'lucide-react';
 import { ShroomLogo } from './ShroomLogo';
 
 interface Props {
   roomId: string;
   displayName: string;
-  onJoin: (micEnabled: boolean, camEnabled: boolean) => void;
+  onJoin: (micEnabled: boolean, camEnabled: boolean, videoId?: string, audioId?: string) => void;
   onCancel: () => void;
 }
 
 export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
+  
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<string>('');
+  const [selectedAudio, setSelectedAudio] = useState<string>('');
+  const [showSettings, setShowSettings] = useState(false);
+
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    let activeStream: MediaStream | null = null;
-    
-    async function setupMedia() {
-      try {
-        const s = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        activeStream = s;
-        setStream(s);
-      } catch (err: any) {
-        console.warn('Media access denied or unavailable', err);
-        setError('Camera/Microphone access denied. You can still join as a viewer.');
-        setMicEnabled(false);
-        setCamEnabled(false);
+  // Isolate stream dependency to avoid infinite loops
+  const streamRef = useRef<MediaStream | null>(null);
+  useEffect(() => { streamRef.current = stream; }, [stream]);
+
+  const loadMedia = async (vid: string, aud: string) => {
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
       }
+      const constraints: MediaStreamConstraints = {
+        video: vid ? { deviceId: { exact: vid } } : true,
+        audio: aud ? { deviceId: { exact: aud } } : true,
+      };
+      const s = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(s);
+      
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
+      setAudioDevices(devices.filter(d => d.kind === 'audioinput'));
+      
+      if (!vid) setSelectedVideo(s.getVideoTracks()[0]?.getSettings().deviceId || '');
+      if (!aud) setSelectedAudio(s.getAudioTracks()[0]?.getSettings().deviceId || '');
+    } catch (e) {
+      console.warn(e);
+      setError('Failed to switch device.');
     }
-    
-    setupMedia();
-    
+  };
+
+  useEffect(() => {
+    loadMedia('', '');
     return () => {
-      if (activeStream) {
-        activeStream.getTracks().forEach(t => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
       }
     };
   }, []);
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedVideo(val);
+    loadMedia(val, selectedAudio);
+  };
+
+  const handleAudioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedAudio(val);
+    loadMedia(selectedVideo, val);
+  };
 
   // Update track states when buttons are toggled
   useEffect(() => {
@@ -53,7 +81,7 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
     }
   }, [micEnabled, camEnabled, stream]);
 
-  // FIX: Attach stream to video element when it renders
+  // Attach stream to video element when it renders
   useEffect(() => {
     if (videoRef.current && stream && camEnabled) {
       videoRef.current.srcObject = stream;
@@ -67,14 +95,22 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-2xl bg-slate-900 rounded-[2rem] p-5 md:p-8 shadow-2xl border border-slate-800 relative z-10 flex flex-col items-center max-w-[95vw] sm:max-w-2xl"
       >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
-            <ShroomLogo className="w-5 h-5" />
+        <div className="flex items-center justify-between w-full mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md">
+              <ShroomLogo className="w-5 h-5" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Ready to join?</h2>
           </div>
-          <h2 className="text-2xl font-bold text-white">Ready to join?</h2>
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className={`p-2 rounded-xl transition-colors ${showSettings ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          >
+            <Settings2 className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden relative shadow-inner mb-8">
+        <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden relative shadow-inner mb-6">
           {stream && camEnabled ? (
             <video 
               ref={videoRef}
@@ -107,6 +143,44 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
           </div>
         </div>
 
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="w-full bg-slate-950 rounded-2xl p-4 mb-6 border border-slate-800 overflow-hidden"
+            >
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Camera</label>
+                  <select 
+                    value={selectedVideo} 
+                    onChange={handleVideoChange}
+                    className="w-full bg-slate-900 border border-slate-800 text-sm text-white rounded-xl p-3 outline-none focus:border-blue-500 transition-colors"
+                  >
+                    {videoDevices.map(d => (
+                      <option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${d.deviceId.slice(0,5)}`}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Microphone</label>
+                  <select 
+                    value={selectedAudio} 
+                    onChange={handleAudioChange}
+                    className="w-full bg-slate-900 border border-slate-800 text-sm text-white rounded-xl p-3 outline-none focus:border-blue-500 transition-colors"
+                  >
+                    {audioDevices.map(d => (
+                      <option key={d.deviceId} value={d.deviceId}>{d.label || `Mic ${d.deviceId.slice(0,5)}`}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {error && (
           <p className="text-amber-400 text-sm font-medium mb-6 bg-amber-400/10 py-2 px-4 rounded-lg w-full text-center">
             {error}
@@ -121,7 +195,7 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
             Cancel
           </button>
           <button
-            onClick={() => onJoin(micEnabled, camEnabled)}
+            onClick={() => onJoin(micEnabled, camEnabled, selectedVideo, selectedAudio)}
             className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
           >
             Join <span className="truncate max-w-[100px] sm:max-w-[150px] inline-block align-bottom">{roomId}</span> <ArrowRight className="w-5 h-5" />
