@@ -83,7 +83,7 @@ export default function App() {
       
       setPendingJoin({
         id: roomDetails.ID,
-        url: 'ws://localhost:7880',
+        url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
         token: joinData.livekit_token,
       });
     } catch (err: any) {
@@ -103,7 +103,7 @@ export default function App() {
       const joinData = await roomsApi.joinRoom(formattedCode);
       setPendingJoin({
         id: joinData.room_id,
-        url: 'ws://localhost:7880',
+        url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
         token: joinData.livekit_token,
       });
     } catch (err: any) {

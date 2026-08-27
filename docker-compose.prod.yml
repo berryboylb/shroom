@@ -32,12 +32,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/shroom?sslmode=disable
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/shroom?sslmode=disable}
       - REDIS_URL=redis://redis:6379/0
       - PORT=8080
-      - LIVEKIT_API_KEY=devkey
-      - LIVEKIT_API_SECRET=secret
-      - JWT_SECRET=prod_secret_change_me
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
+      - JWT_SECRET=${JWT_SECRET:-super-secret-development-key-only}
     environment:
       - SITE_ADDRESS=${SITE_ADDRESS:-:80}
       - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
@@ -58,7 +58,7 @@ services:
     volumes:
       - ./docker/livekit/livekit.prod.yaml:/etc/livekit.prod.yaml
     environment:
-      - "LIVEKIT_KEYS=devkey: secret"
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}"
     restart: unless-stopped
 
   frontend:
@@ -66,8 +66,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:8000:80"
     environment:
       - SITE_ADDRESS=${SITE_ADDRESS:-:80}
       - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
