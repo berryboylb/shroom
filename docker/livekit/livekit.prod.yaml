@@ -9,8 +9,6 @@ turn:
   enabled: true
   domain: shroom.agentiq.build
   udp_port: 3478
-keys:
-  devkey: secret
 webhook:
   api_key: devkey
   urls:
