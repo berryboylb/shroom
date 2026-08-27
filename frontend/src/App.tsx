@@ -1,8 +1,9 @@
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useAuthStore } from './store/authStore';
 import { roomsApi } from './api/rooms';
-import { Room } from './components/Room';
+
+const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
 import { PreJoinScreen } from './components/PreJoinScreen';
 import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,6 +39,17 @@ export default function App() {
   // Auto-rejoin logic: if URL has a room, and we are authenticated, but not in a room yet
   const isAuthenticated = !!useAuthStore(state => state.accessToken);
   
+  useEffect(() => {
+    // Background prefetch for degraded networks
+    if (!activeRoom && !isAutoRejoining) {
+      const timer = setTimeout(() => {
+        // Silently download the 133kB WebRTC engine in the background
+        import('./components/Room');
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeRoom, isAutoRejoining]);
+
   useEffect(() => {
     const urlRoom = getRoomFromUrl();
     if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining) {
