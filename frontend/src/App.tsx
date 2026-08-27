@@ -1,35 +1,16 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from './hooks/useAuth';
-import { useRooms } from './hooks/useRooms';
-import { AlertCircle, Loader2, Video, ArrowRight, Link as LinkIcon } from 'lucide-react';
 import { useAuthStore } from './store/authStore';
 import { roomsApi } from './api/rooms';
+import { Room } from './components/Room';
+import { PreJoinScreen } from './components/PreJoinScreen';
+import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShroomLogo } from './components/ShroomLogo';
-import { PreJoinScreen } from './components/PreJoinScreen';
-
-const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
-const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 export default function App() {
-  const { loginGuest, isLoggingIn, loginError } = useAuth();
-  const { createRoom, isCreatingRoom, createRoomError } = useRooms();
-  const token = useAuthStore(state => state.accessToken);
-  const isAuthenticated = !!token;
-
-  const [displayName, setDisplayName] = useState('');
-  
   const currentPath = window.location.pathname.replace(/^\/+/, '');
   
-  // Intercept the /admin route globally
-  if (currentPath === 'admin') {
-    return (
-      <Suspense fallback={<div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>}>
-        <AdminDashboard />
-      </Suspense>
-    );
-  }
-
   const getRoomFromUrl = () => {
     if (currentPath && currentPath !== 'index.html' && currentPath !== 'admin') return currentPath;
     return new URLSearchParams(window.location.search).get('room') || '';
@@ -52,6 +33,29 @@ export default function App() {
   });
 
   const [pendingJoin, setPendingJoin] = useState<{ id: string; token: string; url: string } | null>(null);
+  const [isAutoRejoining, setIsAutoRejoining] = useState(false);
+
+  // Auto-rejoin logic: if URL has a room, and we are authenticated, but not in a room yet
+  const isAuthenticated = !!useAuthStore(state => state.accessToken);
+  
+  useEffect(() => {
+    const urlRoom = getRoomFromUrl();
+    if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining) {
+      setIsAutoRejoining(true);
+      roomsApi.joinRoom(urlRoom).then(joinData => {
+        // Skip PreJoin and go straight into the room for refreshes
+        setActiveRoom({
+          id: joinData.room_id,
+          url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
+          token: joinData.livekit_token,
+        });
+      }).catch((err) => {
+        console.error("Auto rejoin failed", err);
+      }).finally(() => {
+        setIsAutoRejoining(false);
+      });
+    }
+  }, [isAuthenticated, activeRoom, pendingJoin, isAutoRejoining]);
 
   useEffect(() => {
     if (activeRoom) {
@@ -59,14 +63,19 @@ export default function App() {
       window.history.replaceState({}, '', `/${activeRoom.id}`); 
     } else {
       sessionStorage.removeItem('activeRoom');
-      if (getRoomFromUrl()) {
-        window.history.replaceState({}, '', '/');
-      }
+      // Intentionally DO NOT clear the URL here. 
+      // If we clear the URL on an accidental disconnect, they lose the auto-rejoin state!
     }
   }, [activeRoom]);
 
   const [localError, setLocalError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+
+  const { loginGuest, isLoggingIn, loginError } = useAuth();
+  
+  const savedDisplayName = useAuthStore(state => state.displayName);
+  const [displayName, setDisplayName] = useState(savedDisplayName || '');
 
   const handleJoinLobby = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,17 +86,20 @@ export default function App() {
 
   const handleCreateRoom = async () => {
     setLocalError(null);
+    setIsCreatingRoom(true);
     try {
-      const roomDetails = await createRoom(`${displayName}'s Room`);
-      const joinData = await roomsApi.joinRoom(roomDetails.ID);
+      const room = await roomsApi.createRoom('Instant Room');
+      const joinData = await roomsApi.joinRoom(room.id);
       
       setPendingJoin({
-        id: roomDetails.ID,
+        id: joinData.room_id,
         url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
         token: joinData.livekit_token,
       });
     } catch (err: any) {
-      setLocalError(err.message || 'Network error occurred while creating room');
+      setLocalError(err.message || 'Failed to create room');
+    } finally {
+      setIsCreatingRoom(false);
     }
   };
 
@@ -123,7 +135,7 @@ export default function App() {
     }
   };
 
-  const displayError = localError || (createRoomError ? createRoomError.message : null) || (loginError ? loginError.message : null);
+  const displayError = localError || loginError?.message;
 
   if (activeRoom) {
     return (
@@ -137,7 +149,10 @@ export default function App() {
           roomId={activeRoom.id}
           token={activeRoom.token} 
           serverUrl={activeRoom.url} 
-          onDisconnected={() => setActiveRoom(null)} 
+          onDisconnected={() => {
+            setActiveRoom(null);
+            window.history.replaceState({}, '', '/'); // ONLY clear URL when actually disconnected (intentional or fatal loop)
+          }} 
         />
       </Suspense>
     );
@@ -145,23 +160,37 @@ export default function App() {
 
   if (pendingJoin) {
     return (
-      <PreJoinScreen displayName={displayName || "Guest"} 
+      <PreJoinScreen 
+        displayName={savedDisplayName || displayName || "Guest"} 
         roomId={pendingJoin.id}
         onJoin={(mic, cam, videoId, audioId) => {
-          sessionStorage.setItem('shroom_mic', String(mic));
-          sessionStorage.setItem('shroom_cam', String(cam));
           if (videoId) sessionStorage.setItem('shroom_videoId', videoId);
           if (audioId) sessionStorage.setItem('shroom_audioId', audioId);
+          sessionStorage.setItem('shroom_cam', cam.toString());
+          sessionStorage.setItem('shroom_mic', mic.toString());
           setActiveRoom(pendingJoin);
           setPendingJoin(null);
         }}
-        onCancel={() => setPendingJoin(null)}
+        onCancel={() => {
+          setPendingJoin(null);
+          window.history.replaceState({}, '', '/');
+        }}
       />
     );
   }
 
+  if (isAutoRejoining) {
+    return (
+      <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
+        <p className="font-medium animate-pulse">Reconnecting to your room...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-sans relative overflow-hidden transition-colors duration-500">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+      <div className="absolute top-0 w-full h-[500px] bg-gradient-to-b from-blue-500/10 dark:from-blue-600/20 to-transparent pointer-events-none" />
       
       <div className="absolute top-6 right-6 z-50">
         <button 
