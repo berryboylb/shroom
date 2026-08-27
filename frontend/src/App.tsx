@@ -9,8 +9,18 @@ import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle } from 'lucid
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShroomLogo } from './components/ShroomLogo';
 
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+
 export default function App() {
   const currentPath = window.location.pathname.replace(/^\/+/, '');
+  
+  if (currentPath === 'admin') {
+    return (
+      <Suspense fallback={<div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>}>
+        <AdminDashboard />
+      </Suspense>
+    );
+  }
   
   const getRoomFromUrl = () => {
     if (currentPath && currentPath !== 'index.html' && currentPath !== 'admin') return currentPath;
