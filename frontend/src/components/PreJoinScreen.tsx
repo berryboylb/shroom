@@ -28,9 +28,6 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
         });
         activeStream = s;
         setStream(s);
-        if (videoRef.current) {
-          videoRef.current.srcObject = s;
-        }
       } catch (err: any) {
         console.warn('Media access denied or unavailable', err);
         setError('Camera/Microphone access denied. You can still join as a viewer.');
@@ -56,12 +53,19 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
     }
   }, [micEnabled, camEnabled, stream]);
 
+  // FIX: Attach stream to video element when it renders
+  useEffect(() => {
+    if (videoRef.current && stream && camEnabled) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, camEnabled]);
+
   return (
     <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-slate-900 rounded-[2rem] p-5 md:p-8 shadow-2xl border border-slate-800 relative z-10 flex flex-col items-center w-full max-w-[95vw] sm:max-w-2xl"
+        className="w-full max-w-2xl bg-slate-900 rounded-[2rem] p-5 md:p-8 shadow-2xl border border-slate-800 relative z-10 flex flex-col items-center max-w-[95vw] sm:max-w-2xl"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
