@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Activity, Users, Server, AlertTriangle, ArrowLeft } from 'lucide-react';
+import useSWR from 'swr';
 import { ShroomLogo } from './ShroomLogo';
 
 interface Metrics {
@@ -12,27 +12,17 @@ interface Metrics {
   uptime_seconds: number;
 }
 
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) throw new Error('Network response was not ok');
+  return res.json();
+});
+
 export function AdminDashboard() {
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const res = await fetch('/api/admin/metrics');
-        if (!res.ok) throw new Error('Failed to fetch metrics');
-        const data = await res.json();
-        setMetrics(data);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message);
-      }
-    };
-
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  // Replace useEffect with SWR for clean, cached, race-condition-free polling
+  const { data: metrics, error } = useSWR<Metrics>('/api/admin/metrics', fetcher, {
+    refreshInterval: 3000,
+    revalidateOnFocus: true,
+  });
 
   const formatUptime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -48,7 +38,7 @@ export function AdminDashboard() {
         <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => window.location.hash = ''}
+              onClick={() => window.location.href = '/'}
               className="p-3 bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />

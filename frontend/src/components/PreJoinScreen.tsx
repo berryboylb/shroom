@@ -57,11 +57,11 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
   }, [micEnabled, camEnabled, stream]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-slate-900 rounded-[2rem] p-8 shadow-2xl border border-slate-800 relative z-10 flex flex-col items-center"
+        className="w-full max-w-2xl bg-slate-900 rounded-[2rem] p-5 md:p-8 shadow-2xl border border-slate-800 relative z-10 flex flex-col items-center w-full max-w-[95vw] sm:max-w-2xl"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
@@ -120,7 +120,7 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
             onClick={() => onJoin(micEnabled, camEnabled)}
             className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
           >
-            Join {roomId} <ArrowRight className="w-5 h-5" />
+            Join <span className="truncate max-w-[100px] sm:max-w-[150px] inline-block align-bottom">{roomId}</span> <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </motion.div>

@@ -69,12 +69,12 @@ export function EmojiReactions() {
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-slate-900/80 backdrop-blur-xl p-2 rounded-full border border-slate-700/50 shadow-2xl">
+      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex gap-1 sm:gap-2 max-w-[95vw] overflow-x-auto bg-slate-900/80 backdrop-blur-xl p-2 rounded-full border border-slate-700/50 shadow-2xl">
         {EMOJIS.map(emoji => (
           <button
             key={emoji}
             onClick={() => sendReaction(emoji)}
-            className="w-10 h-10 rounded-full hover:bg-slate-700/80 active:scale-90 transition-all text-xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-slate-700/80 active:scale-90 transition-all text-lg sm:text-xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {emoji}
           </button>

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -18,7 +19,10 @@ var StartTime = time.Now()
 
 func Metrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddUint64(&GlobalMetrics.TotalRequests, 1)
+		// Ignore the dashboard's own polling so it doesn't inflate traffic numbers
+		if !strings.HasPrefix(r.URL.Path, "/api/admin/metrics") {
+			atomic.AddUint64(&GlobalMetrics.TotalRequests, 1)
+		}
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(ww, r)

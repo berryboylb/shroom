@@ -8,25 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShroomLogo } from './components/ShroomLogo';
 import { PreJoinScreen } from './components/PreJoinScreen';
 
-// 1. Lazy load the massive WebRTC Room component to hit 0.2s load times for the Home screen
 const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 export default function App() {
-  const [hash, setHash] = useState(window.location.hash);
-  useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash);
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-
-  if (hash === '#admin') {
-    return (
-      <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>}>
-        <AdminDashboard />
-      </Suspense>
-    );
-  }
   const { loginGuest, isLoggingIn, loginError } = useAuth();
   const { createRoom, isCreatingRoom, createRoomError } = useRooms();
   const token = useAuthStore(state => state.accessToken);
@@ -34,12 +19,19 @@ export default function App() {
 
   const [displayName, setDisplayName] = useState('');
   
-  // URL Routing state
+  const currentPath = window.location.pathname.replace(/^\/+/, '');
+  
+  // Intercept the /admin route globally
+  if (currentPath === 'admin') {
+    return (
+      <Suspense fallback={<div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>}>
+        <AdminDashboard />
+      </Suspense>
+    );
+  }
+
   const getRoomFromUrl = () => {
-    // Check path first (e.g. /abc-def-ghi)
-    const path = window.location.pathname.replace(/^\/+/, '');
-    if (path && path !== 'index.html' && path !== '') return path;
-    // Fallback to query param
+    if (currentPath && currentPath !== 'index.html' && currentPath !== 'admin') return currentPath;
     return new URLSearchParams(window.location.search).get('room') || '';
   };
 
@@ -59,13 +51,12 @@ export default function App() {
     }
   });
 
-  // Pre-join state
   const [pendingJoin, setPendingJoin] = useState<{ id: string; token: string; url: string } | null>(null);
 
   useEffect(() => {
     if (activeRoom) {
       sessionStorage.setItem('activeRoom', JSON.stringify(activeRoom));
-      window.history.replaceState({}, '', `/${activeRoom.id}`); // Clean URL Routing
+      window.history.replaceState({}, '', `/${activeRoom.id}`); 
     } else {
       sessionStorage.removeItem('activeRoom');
       if (getRoomFromUrl()) {
@@ -131,7 +122,7 @@ export default function App() {
   if (activeRoom) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400">
+        <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
           <p className="font-medium animate-pulse">Connecting to secure room...</p>
         </div>
@@ -148,11 +139,9 @@ export default function App() {
 
   if (pendingJoin) {
     return (
-      <PreJoinScreen 
+      <PreJoinScreen displayName={displayName || "Guest"} 
         roomId={pendingJoin.id}
-        displayName={displayName || "Guest"}
         onJoin={(mic, cam) => {
-          // Pass hardware preferences to room (we'll implement this via session storage or local state)
           sessionStorage.setItem('shroom_mic', String(mic));
           sessionStorage.setItem('shroom_cam', String(cam));
           setActiveRoom(pendingJoin);
@@ -164,7 +153,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-sans relative overflow-hidden transition-colors duration-500">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-sans relative overflow-hidden transition-colors duration-500">
       
       <div className="absolute top-6 right-6 z-50">
         <button 

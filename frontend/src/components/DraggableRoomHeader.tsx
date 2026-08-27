@@ -26,7 +26,7 @@ export function DraggableRoomHeader({ roomId }: Props) {
     <motion.div 
       drag 
       dragMomentum={false}
-      className="absolute top-6 left-6 z-50 flex items-center gap-3 bg-white/70 dark:bg-slate-800/80 backdrop-blur-2xl border border-white/30 dark:border-slate-600/50 shadow-2xl p-2 pr-4 rounded-3xl cursor-grab active:cursor-grabbing"
+      className="absolute max-w-[95vw] sm:max-w-none top-[env(safe-area-inset-top,1.5rem)] left-2 sm:left-6 z-50 flex items-center gap-1 sm:gap-3 bg-white/70 dark:bg-slate-800/80 backdrop-blur-2xl border border-white/30 dark:border-slate-600/50 shadow-2xl p-2 pr-2 sm:pr-4 rounded-3xl cursor-grab active:cursor-grabbing"
     >
       <div className="pl-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-colors flex items-center gap-2">
         <GripHorizontal size={20} />
@@ -51,7 +51,7 @@ export function DraggableRoomHeader({ roomId }: Props) {
         title="Copy Invite Link"
       >
         {copied ? <Check size={16} className="text-emerald-500" /> : <Link size={16} />}
-        {copied ? 'Copied URL!' : 'Copy Link'}
+        {copied ? 'Copied!' : 'Copy'}
       </button>
 
       <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-1"></div>
