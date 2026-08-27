@@ -8,9 +8,7 @@ rtc:
 turn:
   enabled: true
   domain: shroom.agentiq.build
-  tls_port: 3478
   udp_port: 3478
-  external_tls: false
 keys:
   devkey: secret
 webhook:
