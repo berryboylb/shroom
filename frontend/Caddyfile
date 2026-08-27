@@ -1,4 +1,6 @@
-:80 {
+:443 {
+    tls /etc/letsencrypt/live/shroom.agentiq.build/fullchain.pem /etc/letsencrypt/live/shroom.agentiq.build/privkey.pem
+
     root * /srv
     encode gzip zstd
 
