@@ -26,6 +26,9 @@
         reverse_proxy livekit:7880
     }
     
-    try_files {path} /index.html
-    file_server
+    # Only apply static file routing if it didn't match the API/WS handlers above
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
 }
