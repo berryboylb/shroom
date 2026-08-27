@@ -106,7 +106,7 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
             onClick={() => setShowSettings(!showSettings)}
             className={`p-2 rounded-xl transition-colors ${showSettings ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
           >
-            <Settings2 className="w-5 h-5" />
+            <><Settings2 className="w-5 h-5" /> <span className="text-sm font-bold hidden sm:inline">Device Settings</span></>
           </button>
         </div>
 
