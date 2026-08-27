@@ -4,7 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { roomsApi } from './api/rooms';
 import { Room } from './components/Room';
 import { PreJoinScreen } from './components/PreJoinScreen';
-import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShroomLogo } from './components/ShroomLogo';
 
@@ -89,7 +89,7 @@ export default function App() {
     setIsCreatingRoom(true);
     try {
       const room = await roomsApi.createRoom('Instant Room');
-      const joinData = await roomsApi.joinRoom(room.id);
+      const joinData = await roomsApi.joinRoom(room.ID);
       
       setPendingJoin({
         id: joinData.room_id,
