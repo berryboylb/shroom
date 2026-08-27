@@ -53,6 +53,8 @@ services:
       - "7880:7880"
       - "7881:7881"
       - "7882:7882/udp"
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
     volumes:
       - ./docker/livekit/livekit.prod.yaml:/etc/livekit.prod.yaml
     environment:
