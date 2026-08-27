@@ -20,9 +20,11 @@ export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
   // Read initial device preferences set during PreJoinScreen
   const initialVideo = sessionStorage.getItem('shroom_cam') !== 'false';
   const initialAudio = sessionStorage.getItem('shroom_mic') !== 'false';
+  const videoId = sessionStorage.getItem('shroom_videoId');
+  const audioId = sessionStorage.getItem('shroom_audioId');
 
   return (
-    <div className="relative h-screen w-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
+    <div className="relative h-[100dvh] w-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
       <LiveKitRoom
         video={initialVideo}
         audio={initialAudio}
@@ -31,6 +33,12 @@ export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
         options={{ 
           adaptiveStream: true, 
           dynacast: true,
+          videoCaptureDefaults: {
+            deviceId: videoId || undefined,
+          },
+          audioCaptureDefaults: {
+            deviceId: audioId || undefined,
+          },
           publishDefaults: {
             simulcast: true,
             videoSimulcastLayers: [
