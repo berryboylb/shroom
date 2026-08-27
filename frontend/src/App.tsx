@@ -97,7 +97,13 @@ export default function App() {
     setLocalError(null);
     setIsJoining(true);
     
-    const formattedCode = joinCode.trim().toLowerCase().replace(/\s+/g, '-');
+    let extracted = joinCode.trim();
+    if (extracted.includes('?room=')) {
+      extracted = extracted.split('?room=')[1].split('&')[0];
+    } else if (extracted.includes('/')) {
+      extracted = extracted.split('/').filter(Boolean).pop() || extracted;
+    }
+    const formattedCode = extracted.toLowerCase().replace(/\s+/g, '-');
 
     try {
       const joinData = await roomsApi.joinRoom(formattedCode);
@@ -141,9 +147,11 @@ export default function App() {
     return (
       <PreJoinScreen displayName={displayName || "Guest"} 
         roomId={pendingJoin.id}
-        onJoin={(mic, cam) => {
+        onJoin={(mic, cam, videoId, audioId) => {
           sessionStorage.setItem('shroom_mic', String(mic));
           sessionStorage.setItem('shroom_cam', String(cam));
+          if (videoId) sessionStorage.setItem('shroom_videoId', videoId);
+          if (audioId) sessionStorage.setItem('shroom_audioId', audioId);
           setActiveRoom(pendingJoin);
           setPendingJoin(null);
         }}
