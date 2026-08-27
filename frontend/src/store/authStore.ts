@@ -1,13 +1,26 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface AuthState {
   accessToken: string | null;
+  displayName: string | null;
   setAccessToken: (token: string) => void;
+  setDisplayName: (name: string) => void;
   clearAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  accessToken: null,
-  setAccessToken: (token) => set({ accessToken: token }),
-  clearAuth: () => set({ accessToken: null }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      displayName: null,
+      setAccessToken: (token) => set({ accessToken: token }),
+      setDisplayName: (name) => set({ displayName: name }),
+      clearAuth: () => set({ accessToken: null, displayName: null }),
+    }),
+    {
+      name: 'shroom-auth',
+      storage: createJSONStorage(() => sessionStorage),
+    }
+  )
+);
