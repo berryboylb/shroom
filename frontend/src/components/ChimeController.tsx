@@ -1,25 +1,27 @@
-import { useEffect, useRef } from 'react';
-import { useRemoteParticipants } from '@livekit/components-react';
+import { useEffect } from 'react';
+import { useRoomContext } from '@livekit/components-react';
+import { RoomEvent } from 'livekit-client';
 import { playJoinChime, playLeaveChime } from '../utils/audio';
 
 export function ChimeController() {
-  const participants = useRemoteParticipants();
-  const prevCountRef = useRef(participants.length);
+  const room = useRoomContext();
 
   useEffect(() => {
-    const currentCount = participants.length;
-    const prevCount = prevCountRef.current;
-    
-    if (currentCount > prevCount) {
-      playJoinChime();
-    } else if (currentCount < prevCount) {
-      playLeaveChime();
-    }
-    
-    prevCountRef.current = currentCount;
-  }, [participants]);
+    const handleJoin = () => playJoinChime();
+    const handleLeave = () => playLeaveChime();
 
-  // Play the join chime exactly once for the local user when this mounts (they enter the room)
+    // These events ONLY fire for people who join/leave AFTER we are already connected.
+    // They intentionally ignore people who were already in the room before we got here.
+    room.on(RoomEvent.ParticipantConnected, handleJoin);
+    room.on(RoomEvent.ParticipantDisconnected, handleLeave);
+
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, handleJoin);
+      room.off(RoomEvent.ParticipantDisconnected, handleLeave);
+    };
+  }, [room]);
+
+  // Play the join chime exactly once for the local user themselves when they enter
   useEffect(() => {
     playJoinChime();
   }, []);
