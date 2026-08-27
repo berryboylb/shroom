@@ -54,7 +54,7 @@ func (s *Service) JoinRoom(ctx context.Context, roomID string, participantID str
 
 	// Update status to active if it was waiting
 	if r.Status == "waiting" {
-		_ = s.repo.UpdateRoomStatus(ctx, roomID, "active")
+		if err := s.repo.UpdateRoomStatus(ctx, roomID, "active"); err != nil { return "", fmt.Errorf("failed to update room status: %w", err) }
 	}
 
 	claims := jwt.MapClaims{
