@@ -89,10 +89,4 @@ func (h *Handler) HandleLiveKitWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // Stubs for telemetry endpoints
-func (h *Handler) HandleTelemetry(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
 
-func (h *Handler) HandleDiagnostics(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}

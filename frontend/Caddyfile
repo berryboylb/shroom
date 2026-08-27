@@ -1,0 +1,32 @@
+{
+    email {$ACME_EMAIL:admin@example.com}
+}
+
+{$SITE_ADDRESS::80} {
+    # Serve static files from the build output
+    root * /srv
+    
+    # Compression
+    encode gzip zstd
+
+    # Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: http: https:; img-src 'self' data:; media-src 'self' blob:;"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # API and WebSockets Proxy
+    handle /api/* {
+        reverse_proxy backend:8080
+    }
+    handle /ws/* {
+        reverse_proxy backend:8080
+    }
+    
+    # Client-side routing fallback
+    try_files {path} /index.html
+    file_server
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sync/atomic"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,6 +19,7 @@ type Hub struct {
 	unregister chan *Client
 	
 	redisClient *redis.Client
+	ActiveCount int32
 }
 
 type roomMessage struct {
@@ -51,9 +53,6 @@ func (h *Hub) listenRedisPubSub() {
 	for msg := range ch {
 		var rm roomMessage
 		if err := json.Unmarshal([]byte(msg.Payload), &rm); err == nil {
-			// This is safe since we only read from h.rooms?
-			// Wait, calling broadcastToRoomUnsafe from another goroutine is a race.
-			// Better send it to h.roomMsg channel so Run() handles it safely.
 			h.roomMsg <- rm
 		}
 	}
@@ -64,9 +63,11 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
+			atomic.AddInt32(&h.ActiveCount, 1)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
+				atomic.AddInt32(&h.ActiveCount, -1)
 				if client.RoomID != "" {
 					if clientsInRoom, ok := h.rooms[client.RoomID]; ok {
 						delete(clientsInRoom, client)
@@ -79,7 +80,6 @@ func (h *Hub) Run() {
 								"participantId": client.UserID,
 							},
 						})
-						// Publish to Redis instead of local broadcast
 						h.publishToRoom(client.RoomID, resp)
 					}
 				}
@@ -92,7 +92,6 @@ func (h *Hub) Run() {
 			}
 			h.rooms[client.RoomID][client] = true
 		case rm := <-h.roomMsg:
-			// Actually broadcast to local clients
 			h.broadcastToRoomUnsafe(rm.roomID, rm.message)
 		}
 	}
@@ -104,7 +103,6 @@ func (h *Hub) publishToRoom(roomID string, message []byte) {
 		b, _ := json.Marshal(rm)
 		h.redisClient.Publish(context.Background(), "room_events", b)
 	} else {
-		// Fallback to local
 		h.roomMsg <- roomMessage{roomID: roomID, message: message}
 	}
 }
@@ -118,6 +116,7 @@ func (h *Hub) broadcastToRoomUnsafe(roomID string, message []byte) {
 				close(client.send)
 				delete(h.clients, client)
 				delete(clientsInRoom, client)
+				atomic.AddInt32(&h.ActiveCount, -1)
 			}
 		}
 	}
@@ -166,4 +165,8 @@ func (h *Hub) HandleMessage(client *Client, msg map[string]interface{}) {
 		b, _ := json.Marshal(resp)
 		h.publishToRoom(roomID, b)
 	}
+}
+
+func (h *Hub) GetActiveClientCount() int {
+	return int(atomic.LoadInt32(&h.ActiveCount))
 }

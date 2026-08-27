@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, Check, GripHorizontal } from 'lucide-react';
 import { DeviceSettings } from './DeviceSettings';
+import { ShroomLogo } from './ShroomLogo';
 
 interface Props {
   roomId: string;
@@ -27,11 +28,15 @@ export function DraggableRoomHeader({ roomId }: Props) {
       dragMomentum={false}
       className="absolute top-6 left-6 z-50 flex items-center gap-3 bg-white/70 dark:bg-slate-800/80 backdrop-blur-2xl border border-white/30 dark:border-slate-600/50 shadow-2xl p-2 pr-4 rounded-3xl cursor-grab active:cursor-grabbing"
     >
-      <div className="pl-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-colors">
+      <div className="pl-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-colors flex items-center gap-2">
         <GripHorizontal size={20} />
       </div>
       
-      <div className="flex flex-col items-start leading-none ml-1">
+      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md ml-1">
+        <ShroomLogo className="w-4 h-4" />
+      </div>
+
+      <div className="flex flex-col items-start leading-none ml-2">
         <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-1">
           Meeting Link
         </span>

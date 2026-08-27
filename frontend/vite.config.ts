@@ -1,9 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react()],
   server: {
     proxy: {
       '/api': {
@@ -15,6 +14,37 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+    }
+  },
+  build: {
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks: (id: string) => {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/@livekit/components-react')) {
+            return 'livekit-react-vendor';
+          }
+          // Split out some heavy internal dependencies of livekit-client if possible
+          if (id.includes('node_modules/protobufjs')) {
+            return 'protobuf-vendor';
+          }
+          if (id.includes('node_modules/webrtc-adapter')) {
+            return 'webrtc-adapter-vendor';
+          }
+          if (id.includes('node_modules/livekit-client')) {
+            return 'livekit-core-vendor';
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'framer-motion-vendor';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'lucide-vendor';
+          }
+        }
+      }
     }
   }
 })

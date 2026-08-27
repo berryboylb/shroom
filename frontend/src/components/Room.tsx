@@ -6,6 +6,7 @@ import {
 import '@livekit/components-styles';
 import { NetworkHealthOverlay } from './NetworkHealthOverlay';
 import { DraggableRoomHeader } from './DraggableRoomHeader';
+import { EmojiReactions } from './EmojiReactions';
 import { VideoPresets } from 'livekit-client';
 
 interface RoomProps {
@@ -16,11 +17,15 @@ interface RoomProps {
 }
 
 export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
+  // Read initial device preferences set during PreJoinScreen
+  const initialVideo = sessionStorage.getItem('shroom_cam') !== 'false';
+  const initialAudio = sessionStorage.getItem('shroom_mic') !== 'false';
+
   return (
     <div className="relative h-screen w-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
       <LiveKitRoom
-        video={true}
-        audio={true}
+        video={initialVideo}
+        audio={initialAudio}
         token={token}
         serverUrl={serverUrl}
         options={{ 
@@ -43,6 +48,7 @@ export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
       >
         <NetworkHealthOverlay />
         <DraggableRoomHeader roomId={roomId} />
+        <EmojiReactions />
         
         <div className="flex-1 p-4 pb-0 h-full">
           <VideoConference />

@@ -1,13 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useRooms } from './hooks/useRooms';
-import { Room } from './components/Room';
 import { AlertCircle, Loader2, Video, ArrowRight, Link as LinkIcon } from 'lucide-react';
 import { useAuthStore } from './store/authStore';
 import { roomsApi } from './api/rooms';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ShroomLogo } from './components/ShroomLogo';
+import { PreJoinScreen } from './components/PreJoinScreen';
+
+// 1. Lazy load the massive WebRTC Room component to hit 0.2s load times for the Home screen
+const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 export default function App() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  if (hash === '#admin') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>}>
+        <AdminDashboard />
+      </Suspense>
+    );
+  }
   const { loginGuest, isLoggingIn, loginError } = useAuth();
   const { createRoom, isCreatingRoom, createRoomError } = useRooms();
   const token = useAuthStore(state => state.accessToken);
@@ -15,14 +34,24 @@ export default function App() {
 
   const [displayName, setDisplayName] = useState('');
   
-  // Persist activeRoom in sessionStorage so a browser refresh doesn't drop the call
+  // URL Routing state
+  const getRoomFromUrl = () => {
+    // Check path first (e.g. /abc-def-ghi)
+    const path = window.location.pathname.replace(/^\/+/, '');
+    if (path && path !== 'index.html' && path !== '') return path;
+    // Fallback to query param
+    return new URLSearchParams(window.location.search).get('room') || '';
+  };
+
+  const [joinCode, setJoinCode] = useState(getRoomFromUrl());
+  const [mode, setMode] = useState<'start' | 'join'>(getRoomFromUrl() ? 'join' : 'start');
+
   const [activeRoom, setActiveRoom] = useState<{ id: string; url: string; token: string } | null>(() => {
     try {
       const saved = sessionStorage.getItem('activeRoom');
       if (!saved) return null;
       const parsed = JSON.parse(saved);
-      const urlRoom = new URLSearchParams(window.location.search).get('room');
-      // If the URL explicitly asks for a different room, ignore the saved session
+      const urlRoom = getRoomFromUrl();
       if (urlRoom && urlRoom !== parsed.id) return null;
       return parsed;
     } catch {
@@ -30,29 +59,23 @@ export default function App() {
     }
   });
 
-  // Sync activeRoom changes to sessionStorage
+  // Pre-join state
+  const [pendingJoin, setPendingJoin] = useState<{ id: string; token: string; url: string } | null>(null);
+
   useEffect(() => {
     if (activeRoom) {
       sessionStorage.setItem('activeRoom', JSON.stringify(activeRoom));
-      // Ensure URL matches the active room
-      window.history.replaceState({}, '', `?room=${activeRoom.id}`);
+      window.history.replaceState({}, '', `/${activeRoom.id}`); // Clean URL Routing
     } else {
       sessionStorage.removeItem('activeRoom');
-      // Clean up URL when leaving
-      window.history.replaceState({}, '', window.location.pathname);
+      if (getRoomFromUrl()) {
+        window.history.replaceState({}, '', '/');
+      }
     }
   }, [activeRoom]);
 
   const [localError, setLocalError] = useState<string | null>(null);
-  
-  // UI State
-  const [joinCode, setJoinCode] = useState(() => {
-    return new URLSearchParams(window.location.search).get('room') || '';
-  });
   const [isJoining, setIsJoining] = useState(false);
-  const [mode, setMode] = useState<'start' | 'join'>(
-    new URLSearchParams(window.location.search).get('room') ? 'join' : 'start'
-  );
 
   const handleJoinLobby = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +90,7 @@ export default function App() {
       const roomDetails = await createRoom(`${displayName}'s Room`);
       const joinData = await roomsApi.joinRoom(roomDetails.ID);
       
-      setActiveRoom({
+      setPendingJoin({
         id: roomDetails.ID,
         url: 'ws://localhost:7880',
         token: joinData.livekit_token,
@@ -87,8 +110,7 @@ export default function App() {
 
     try {
       const joinData = await roomsApi.joinRoom(formattedCode);
-      
-      setActiveRoom({
+      setPendingJoin({
         id: joinData.room_id,
         url: 'ws://localhost:7880',
         token: joinData.livekit_token,
@@ -108,11 +130,35 @@ export default function App() {
 
   if (activeRoom) {
     return (
-      <Room 
-        roomId={activeRoom.id}
-        token={activeRoom.token} 
-        serverUrl={activeRoom.url} 
-        onDisconnected={() => setActiveRoom(null)} 
+      <Suspense fallback={
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400">
+          <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
+          <p className="font-medium animate-pulse">Connecting to secure room...</p>
+        </div>
+      }>
+        <Room 
+          roomId={activeRoom.id}
+          token={activeRoom.token} 
+          serverUrl={activeRoom.url} 
+          onDisconnected={() => setActiveRoom(null)} 
+        />
+      </Suspense>
+    );
+  }
+
+  if (pendingJoin) {
+    return (
+      <PreJoinScreen 
+        roomId={pendingJoin.id}
+        displayName={displayName || "Guest"}
+        onJoin={(mic, cam) => {
+          // Pass hardware preferences to room (we'll implement this via session storage or local state)
+          sessionStorage.setItem('shroom_mic', String(mic));
+          sessionStorage.setItem('shroom_cam', String(cam));
+          setActiveRoom(pendingJoin);
+          setPendingJoin(null);
+        }}
+        onCancel={() => setPendingJoin(null)}
       />
     );
   }
@@ -140,7 +186,7 @@ export default function App() {
             whileHover={{ scale: 1.05, rotate: -5 }}
             className="w-20 h-20 bg-blue-600 text-white rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-blue-500/20"
           >
-            <Video className="w-10 h-10" strokeWidth={2.5} />
+            <ShroomLogo className="w-10 h-10" />
           </motion.div>
           <h1 className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white mb-3">
             Shroom

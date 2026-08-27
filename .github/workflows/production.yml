@@ -1,0 +1,56 @@
+name: Shroom CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Frontend
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Frontend Typecheck
+        working-directory: ./frontend
+        run: npx tsc -b
+
+      # Backend
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          
+      - name: Backend Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend
+
+  build-docker:
+    needs: lint-and-typecheck
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Backend Image
+        working-directory: ./backend
+        run: docker build -t shroom-backend:latest -f Dockerfile .
+
+      - name: Build Frontend Image
+        working-directory: ./frontend
+        run: docker build -t shroom-frontend:latest -f Dockerfile .
