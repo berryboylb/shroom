@@ -59,6 +59,7 @@ services:
       - ./docker/livekit/livekit.prod.yaml:/etc/livekit.prod.yaml
     environment:
       - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+      - "LIVEKIT_WEBHOOK_API_KEY=${LIVEKIT_API_KEY}"
     restart: unless-stopped
 
   frontend:
