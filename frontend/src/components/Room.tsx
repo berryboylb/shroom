@@ -8,6 +8,7 @@ import { NetworkHealthOverlay } from './NetworkHealthOverlay';
 import { DraggableRoomHeader } from './DraggableRoomHeader';
 import { EmojiReactions } from './EmojiReactions';
 import { ChimeController } from './ChimeController';
+import { DeviceStateSync } from './DeviceStateSync';
 import { VideoPresets } from 'livekit-client';
 
 interface RoomProps {
@@ -48,8 +49,11 @@ export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
               VideoPresets.h360,
             ],
             audioPreset: { maxBitrate: 32_000 },
-            dtx: true
+            dtx: false // DISABLED: DTX causes one-way audio on strict NATs due to UDP connection timeouts during silence
           }
+        }}
+        connectOptions={{
+          autoSubscribe: true,
         }}
         onDisconnected={onDisconnected}
         data-lk-theme="default"
@@ -59,6 +63,7 @@ export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
         <DraggableRoomHeader roomId={roomId} />
         <EmojiReactions />
         <ChimeController />
+        <DeviceStateSync />
         
         <div className="flex-1 p-0 sm:p-4 sm:pb-0 h-full">
           <VideoConference />

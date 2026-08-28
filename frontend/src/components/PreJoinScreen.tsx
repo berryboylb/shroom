@@ -88,6 +88,12 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
     }
   }, [stream, camEnabled]);
 
+  const inAppBrowserWarning = (() => {
+    const ua = navigator.userAgent || navigator.vendor;
+    const rules = ['FBAV', 'FBAN', 'Instagram', 'Line', 'Snapchat', 'LinkedIn', 'Twitter', 'MicroMessenger', 'WeChat', 'WhatsApp', 'Slack'];
+    return rules.some(rule => ua.includes(rule));
+  })();
+
   return (
     <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
       <motion.div 
@@ -95,6 +101,12 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-2xl bg-slate-900 rounded-[2rem] p-5 md:p-8 shadow-2xl border border-slate-800 relative z-10 flex flex-col items-center max-w-[95vw] sm:max-w-2xl"
       >
+        {inAppBrowserWarning && (
+          <div className="w-full bg-amber-500/20 border border-amber-500/50 text-amber-400 p-3 rounded-xl mb-6 text-sm font-medium flex items-center justify-between">
+            <span><strong>Warning:</strong> You are using an in-app browser. If you experience lag or dropped audio, please open this link in Safari or Chrome.</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between w-full mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md">
