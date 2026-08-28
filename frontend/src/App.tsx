@@ -214,7 +214,7 @@ export default function App() {
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
       <div className="absolute top-0 w-full h-[500px] bg-gradient-to-b from-blue-500/10 dark:from-blue-600/20 to-transparent pointer-events-none" />
       
-      <div className="absolute top-6 right-6 z-50">
+      <div className="absolute top-[env(safe-area-inset-top,1.5rem)] right-4 sm:top-6 sm:right-6 z-50">
         <button 
           onClick={() => document.documentElement.classList.toggle('dark')}
           className="p-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 transition-all text-xl"

@@ -111,7 +111,7 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
     <div className="min-h-screen bg-slate-950 text-white p-8 font-sans">
       <div className="max-w-5xl mx-auto">
         
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 sm:gap-0">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => window.location.href = '/'}
@@ -123,13 +123,13 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
               <ShroomLogo className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">System Metrics</h1>
-              <p className="text-slate-400 font-medium text-sm mt-1">Live telemetry • Ultra-low footprint</p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">System Metrics</h1>
+              <p className="text-slate-400 font-medium text-xs sm:text-sm mt-1">Live telemetry • Ultra-low footprint</p>
             </div>
           </div>
           
           {metrics && (
-            <div className="text-right">
+            <div className="text-left sm:text-right w-full sm:w-auto">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-full font-bold text-sm border border-emerald-500/20">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 Uptime: {formatUptime(metrics.uptime_seconds)}

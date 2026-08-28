@@ -24,15 +24,35 @@
   --lk-control-bar-bg: rgba(15, 23, 42, 0.85);
 }
 .lk-control-bar {
-  margin-bottom: 24px;
-  border-radius: 9999px !important;
+  margin-bottom: max(16px, env(safe-area-inset-bottom));
+  border-radius: 2rem !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255,255,255,0.2);
-  display: inline-flex;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 95vw;
   margin-left: auto;
   margin-right: auto;
   padding: 8px 16px;
+  gap: 8px;
 }
+
+@media (max-width: 640px) {
+  /* Hide the dropdown device selection arrows on mobile to save space */
+  .lk-button-group-menu {
+    display: none !important;
+  }
+  .lk-control-bar {
+    padding: 8px;
+    margin-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  /* Ensure individual buttons shrink if needed */
+  .lk-button {
+    padding: 0.5rem !important;
+  }
+}
+
 .lk-button {
   border-radius: 9999px !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);

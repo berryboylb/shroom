@@ -60,7 +60,7 @@ export function Room({ roomId, token, serverUrl, onDisconnected }: RoomProps) {
         <EmojiReactions />
         <ChimeController />
         
-        <div className="flex-1 p-4 pb-0 h-full">
+        <div className="flex-1 p-0 sm:p-4 sm:pb-0 h-full">
           <VideoConference />
         </div>
         <RoomAudioRenderer />
