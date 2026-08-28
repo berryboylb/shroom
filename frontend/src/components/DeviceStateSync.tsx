@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useLocalParticipant } from '@livekit/components-react';
-import { Track } from 'livekit-client';
 
 export function DeviceStateSync() {
   const { localParticipant } = useLocalParticipant();
