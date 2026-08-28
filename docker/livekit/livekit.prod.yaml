@@ -9,6 +9,3 @@ turn:
   enabled: true
   domain: shroom.agentiq.build
   udp_port: 3478
-webhook:
-  urls:
-    - http://backend:8080/api/webhooks/livekit
