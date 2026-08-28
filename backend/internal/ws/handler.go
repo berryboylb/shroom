@@ -12,7 +12,11 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all for dev
+		origin := r.Header.Get("Origin")
+		// Allow production domain and local development
+		return origin == "https://shroom.agentiq.build" ||
+			origin == "http://localhost:5173" ||
+			origin == "http://localhost:3000"
 	},
 }
 

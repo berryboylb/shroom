@@ -1,6 +1,9 @@
-import { Activity, Users, Server, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
+import { Activity, Users, Server, AlertTriangle, ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 import useSWR from 'swr';
 import { ShroomLogo } from './ShroomLogo';
+import { useAuthStore } from '../store/authStore';
+import { authApi } from '../api/auth';
 
 interface Metrics {
   memory_alloc_mb: number;
@@ -12,13 +15,86 @@ interface Metrics {
   uptime_seconds: number;
 }
 
-const fetcher = (url: string) => fetch(url).then(res => {
-  if (!res.ok) throw new Error('Network response was not ok');
-  return res.json();
-});
+// Authenticated fetcher that sends the JWT token
+const createFetcher = (token: string) => (url: string) =>
+  fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(res => {
+    if (!res.ok) throw new Error('Network response was not ok');
+    return res.json();
+  });
+
+function AdminLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) {
+  const [name, setName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const setAccessToken = useAuthStore(state => state.setAccessToken);
+  const setDisplayName = useAuthStore(state => state.setDisplayName);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await authApi.loginGuest(name.trim());
+      setAccessToken(res.access_token);
+      setDisplayName(name.trim());
+      onAuthenticated();
+    } catch {
+      setError('Authentication failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-8 font-sans">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShroomLogo className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold">Admin Access</h1>
+          <p className="text-slate-400 text-sm mt-2">Authenticate to view system metrics</p>
+        </div>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none placeholder:text-slate-500"
+            placeholder="Enter your name"
+          />
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+          <button
+            type="submit"
+            disabled={isLoading || !name.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50"
+          >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export function AdminDashboard() {
-  // Replace useEffect with SWR for clean, cached, race-condition-free polling
+  const token = useAuthStore(state => state.accessToken);
+  const [authed, setAuthed] = useState(!!token);
+
+  if (!authed || !token) {
+    return <AdminLoginGate onAuthenticated={() => setAuthed(true)} />;
+  }
+
+  const fetcher = createFetcher(token);
+
+  return <AdminDashboardContent fetcher={fetcher} />;
+}
+
+function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<Metrics> }) {
   const { data: metrics, error } = useSWR<Metrics>('/api/admin/metrics', fetcher, {
     refreshInterval: 3000,
     revalidateOnFocus: true,

@@ -58,12 +58,12 @@ func New(cfg *config.Config) *Server {
 	r.Use(middleware.NoCache)
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedOrigins:   cfg.Server.CORSAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
-		MaxAge:           300, 
+		MaxAge:           300,
 	}))
 
 	r.Use(httprate.LimitByIP(100, 1*time.Second))
@@ -81,31 +81,20 @@ func New(cfg *config.Config) *Server {
 	go hub.Run()
 	wsHandler := ws.NewHandler(hub, tokenService)
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
-	
-	// Custom Lightweight Admin Metrics Endpoint (replaces Prometheus/Grafana)
-	r.Get("/api/admin/metrics", func(w http.ResponseWriter, r *http.Request) {
-		var memStats runtime.MemStats
-		runtime.ReadMemStats(&memStats)
-
-		var activeRooms int
-		if dbConn != nil {
-			dbConn.Pool.QueryRow(context.Background(), "SELECT count(*) FROM rooms WHERE status = 'active'").Scan(&activeRooms)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"memory_alloc_mb":  memStats.Alloc / 1024 / 1024,
-			"goroutines":       runtime.NumGoroutine(),
-			"active_rooms":     activeRooms,
-			"total_http_reqs":  customMiddleware.GlobalMetrics.TotalRequests,
-			"total_http_errs":  customMiddleware.GlobalMetrics.TotalErrors,
-			"active_ws_clients": hub.GetActiveClientCount(), // Assuming this exists or we can mock it
-			"uptime_seconds":   time.Since(customMiddleware.StartTime).Seconds(),
+	// Global request body size limit: 8KB max to prevent memory bomb attacks (M4)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Body != nil {
+				r.Body = http.MaxBytesReader(w, r.Body, 8*1024)
+			}
+			next.ServeHTTP(w, r)
 		})
+	})
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
 	})
 
 	r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/api/auth/guest", authHandler.HandleGuestLogin)
@@ -119,6 +108,28 @@ func New(cfg *config.Config) *Server {
 		r.Post("/api/rooms/{id}/join", roomHandler.HandleJoinRoom)
 		r.Post("/api/telemetry", roomHandler.HandleTelemetry)
 		r.Get("/api/diagnostics", roomHandler.HandleDiagnostics)
+
+		// Admin metrics — now behind JWT auth (C1)
+		r.Get("/api/admin/metrics", func(w http.ResponseWriter, r *http.Request) {
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+
+			var activeRooms int
+			if dbConn != nil {
+				dbConn.Pool.QueryRow(context.Background(), "SELECT count(*) FROM rooms WHERE status = 'active'").Scan(&activeRooms)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"memory_alloc_mb":   memStats.Alloc / 1024 / 1024,
+				"goroutines":        runtime.NumGoroutine(),
+				"active_rooms":      activeRooms,
+				"total_http_reqs":   customMiddleware.GlobalMetrics.TotalRequests,
+				"total_http_errs":   customMiddleware.GlobalMetrics.TotalErrors,
+				"active_ws_clients": hub.GetActiveClientCount(),
+				"uptime_seconds":    time.Since(customMiddleware.StartTime).Seconds(),
+			})
+		})
 	})
 
 	return &Server{

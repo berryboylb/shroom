@@ -3,7 +3,6 @@ package room
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/livekit/protocol/auth"
@@ -55,11 +54,8 @@ func (h *Handler) HandleJoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.service.JoinRoom(r.Context(), roomID, claims.UserID, claims.DisplayName, claims.IsGuest)
 	if err != nil {
-		if strings.Contains(err.Error(), "room not found") || strings.Contains(err.Error(), "room has already ended") {
-			http.Error(w, err.Error(), http.StatusNotFound)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		// Generic error to prevent room ID enumeration (M1)
+		http.Error(w, "Unable to join room", http.StatusNotFound)
 		return
 	}
 
