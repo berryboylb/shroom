@@ -44,6 +44,15 @@ rtc:
   node_ip: YOUR_SERVER_PUBLIC_IP
 ```
 
+The production Compose file uses the bundled `postgres`, `redis`, and `livekit`
+services by default. If those services are external, set `PROD_DATABASE_URL`,
+`PROD_REDIS_URL`, and `PROD_LIVEKIT_URL` in the server environment; do not use
+the host-oriented development URLs for the production container.
+
+The deployment workflow requires Docker Compose v2 (`docker compose`). On an
+Ubuntu VPS using the legacy `docker-compose` command, install the
+`docker-compose-plugin` once before deploying.
+
 ### 3. CI/CD Setup
 To deploy automatically on every push to `main`, add the following Secrets to your GitHub Repository:
 - `VPS_HOST`: Your server's public IP address.

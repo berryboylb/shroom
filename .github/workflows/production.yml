@@ -54,6 +54,9 @@ jobs:
           script: |
             cd /var/www/shroom
             git pull origin main
-            docker-compose -f docker-compose.prod.yml rm -fsv frontend backend livekit
-            docker-compose -f docker-compose.prod.yml build
-            docker-compose -f docker-compose.prod.yml up -d
+            if ! docker compose version >/dev/null 2>&1; then
+              echo "Docker Compose v2 is required. Install the docker-compose-plugin and rerun deployment." >&2
+              exit 1
+            fi
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml up -d
