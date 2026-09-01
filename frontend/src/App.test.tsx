@@ -20,9 +20,9 @@ vi.mock('./api/rooms', () => ({
 }));
 
 vi.mock('./components/PreJoinScreen', () => ({
-  PreJoinScreen: ({ roomId, onJoin }: { roomId: string; onJoin: (mic: boolean, cam: boolean) => void }) => (
+  PreJoinScreen: ({ roomId, encrypted, onJoin }: { roomId: string; encrypted?: boolean; onJoin: (mic: boolean, cam: boolean) => void }) => (
     <div data-testid="prejoin">
-      Device choices for {roomId}
+      Device choices for {roomId}{encrypted ? ' (Encrypted)' : ''}
       <button onClick={() => onJoin(false, false)}>Confirm devices</button>
     </div>
   ),
@@ -87,6 +87,19 @@ describe('room entry', () => {
     render(<App />);
 
     await expectDeviceGate('abc-defg-hij');
+  });
+
+  it('keeps an encrypted invite key in the private URL fragment while gating entry', async () => {
+    window.history.replaceState({}, '', '/secure-room#key=private-secret');
+    vi.mocked(roomsApi.joinRoom).mockResolvedValue({
+      room_id: 'secure-room',
+      livekit_token: 'secure-room-token',
+    });
+
+    render(<App />);
+
+    expect(await screen.findByTestId('prejoin')).toHaveTextContent('secure-room (Encrypted)');
+    expect(screen.queryByTestId('room')).not.toBeInTheDocument();
   });
 
   it('resumes directly when refreshing the exact room active in this tab', async () => {

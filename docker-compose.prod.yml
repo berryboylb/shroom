@@ -9,6 +9,8 @@ services:
       - postgres_data_prod:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
+    mem_limit: 128m
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=40"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d shroom"]
       interval: 10s
@@ -21,6 +23,7 @@ services:
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     restart: unless-stopped
+    mem_limit: 32m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -32,10 +35,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      # Keep production container DNS separate from the host-oriented values in
+      # the development .env file. Deployments can override these explicitly.
+      - DATABASE_URL=${PROD_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/shroom?sslmode=disable}
+      - REDIS_URL=${PROD_REDIS_URL:-redis://redis:6379}
       - PORT=8080
-      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_URL=${PROD_LIVEKIT_URL:-ws://livekit:7880}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - JWT_SECRET=${JWT_SECRET}
@@ -45,6 +50,7 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    mem_limit: 64m
 
   livekit:
     image: livekit/livekit-server:latest
@@ -62,6 +68,7 @@ services:
       - "LIVEKIT_WEBHOOK_API_KEY=${LIVEKIT_API_KEY}"
       - "LIVEKIT_WEBHOOK_URLS=http://backend:8080/api/webhooks/livekit"
     restart: unless-stopped
+    mem_limit: 256m
 
   frontend:
     build:
@@ -75,6 +82,7 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    mem_limit: 64m
     volumes:
       - caddy_data:/data
       - caddy_config:/config

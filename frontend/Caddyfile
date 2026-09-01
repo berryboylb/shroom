@@ -6,8 +6,9 @@
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: http: https:; img-src 'self' data:; media-src 'self' blob:;"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: http: https:; img-src 'self' data:; media-src 'self' blob:;"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(self), microphone=(self), display-capture=(self), geolocation=()"
     }
 
     @api path /api /api/*

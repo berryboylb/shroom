@@ -2,6 +2,7 @@ package room
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,11 +12,12 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service   *Service
+	telemetry *TelemetryStore
 }
 
 func NewHandler(s *Service) *Handler {
-	return &Handler{service: s}
+	return &Handler{service: s, telemetry: NewTelemetryStore(500)}
 }
 
 type CreateRoomRequest struct {
@@ -25,14 +27,18 @@ type CreateRoomRequest struct {
 func (h *Handler) HandleCreateRoom(w http.ResponseWriter, r *http.Request) {
 	var req CreateRoomRequest
 	json.NewDecoder(r.Body).Decode(&req)
-	
+
 	if req.Title == "" {
 		req.Title = "Instant Meeting"
 	}
 
 	room, err := h.service.CreateRoom(r.Context(), req.Title)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, ErrStorageUnavailable) {
+			http.Error(w, "Service temporarily unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, "Unable to create room", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -54,6 +60,10 @@ func (h *Handler) HandleJoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.service.JoinRoom(r.Context(), roomID, claims.UserID, claims.DisplayName, claims.IsGuest)
 	if err != nil {
+		if errors.Is(err, ErrStorageUnavailable) {
+			http.Error(w, "Service temporarily unavailable", http.StatusServiceUnavailable)
+			return
+		}
 		// Generic error to prevent room ID enumeration (M1)
 		http.Error(w, "Unable to join room", http.StatusNotFound)
 		return
@@ -85,4 +95,3 @@ func (h *Handler) HandleLiveKitWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // Stubs for telemetry endpoints
-

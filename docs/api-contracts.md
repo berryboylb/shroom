@@ -274,6 +274,8 @@ interface RoomStateSync {
 | `participant:left` | S → C | `{ participantId: string }` | User left | When another user leaves |
 | `participant:updated`| Bidirectional | `{ participantId: string, state: Partial<Participant> }` | State change | Mute, camera toggle, etc. |
 | `participant:speaking`| S → C | `{ participantId: string, level: number }` | Audio activity | High frequency, driven by SFU |
+| `room:hand:set` | C → S | `{ raised: boolean }` | Raise or lower the authenticated participant's hand | Raising twice is idempotent; lowering and raising again moves the participant to the end |
+| `hand_queue:updated` | S → C | `{ queue: Array<{ participantId: string, displayName: string, raisedAt: string }> }` | Authoritative raised-hand queue in first-raised order | Sent on room join and after every queue change |
 
 ### Quality
 

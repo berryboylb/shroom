@@ -20,7 +20,7 @@ type Client struct {
 	conn         *websocket.Conn
 	send         chan []byte
 	tokenService *auth.TokenService
-	
+
 	Authenticated bool
 	UserID        string
 	DisplayName   string
@@ -44,12 +44,27 @@ func (c *Client) readPump() {
 		}
 	}()
 
+	// Per-connection sliding window prevents one authenticated client from
+	// monopolizing the hub without introducing an external rate-limit service.
+	windowStarted := time.Now()
+	messagesInWindow := 0
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			break
+			return
 		}
-		
+		if time.Since(windowStarted) >= time.Minute {
+			windowStarted = time.Now()
+			messagesInWindow = 0
+		}
+		messagesInWindow++
+		if messagesInWindow > 100 {
+			c.conn.WriteControl(websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "message rate exceeded"),
+				time.Now().Add(writeWait))
+			return
+		}
+
 		var msg map[string]interface{}
 		if err := json.Unmarshal(message, &msg); err == nil {
 			c.hub.HandleMessage(c, msg)

@@ -1,7 +1,8 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useAuthStore } from './store/authStore';
 import { roomsApi } from './api/rooms';
+import { authApi } from './api/auth';
 
 const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
 import { PreJoinScreen } from './components/PreJoinScreen';
@@ -11,7 +12,27 @@ import { ShroomLogo } from './components/ShroomLogo';
 
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
-type RoomConnection = { id: string; url: string; token: string };
+type RoomConnection = { id: string; url: string; token: string; e2eeKey?: string; canEnableE2EE?: boolean };
+
+function getE2EEKeyFromUrl(): string | undefined {
+  return new URLSearchParams(window.location.hash.replace(/^#/, '')).get('key') || undefined;
+}
+
+function supportsMediaE2EE(): boolean {
+  return 'RTCRtpScriptTransform' in window || (
+    typeof RTCRtpSender !== 'undefined' && 'createEncodedStreams' in RTCRtpSender.prototype
+  );
+}
+
+function generateE2EEKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function getRoomFromLocation(currentPath: string): string {
+  if (currentPath && currentPath !== 'index.html' && currentPath !== 'admin') return currentPath;
+  return new URLSearchParams(window.location.search).get('room') || '';
+}
 
 function getSavedRoomForReconnect(urlRoom: string): RoomConnection | null {
   if (!urlRoom) return null;
@@ -22,7 +43,8 @@ function getSavedRoomForReconnect(urlRoom: string): RoomConnection | null {
       saved &&
       saved.id === urlRoom &&
       typeof saved.url === 'string' &&
-      typeof saved.token === 'string'
+      typeof saved.token === 'string' &&
+      (saved.e2eeKey === undefined || typeof saved.e2eeKey === 'string')
     ) {
       return saved;
     }
@@ -35,7 +57,6 @@ function getSavedRoomForReconnect(urlRoom: string): RoomConnection | null {
 
 export default function App() {
   const currentPath = window.location.pathname.replace(/^\/+/, '');
-  
   if (currentPath === 'admin') {
     return (
       <Suspense fallback={<div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>}>
@@ -43,27 +64,58 @@ export default function App() {
       </Suspense>
     );
   }
-  
-  const getRoomFromUrl = () => {
-    if (currentPath && currentPath !== 'index.html' && currentPath !== 'admin') return currentPath;
-    return new URLSearchParams(window.location.search).get('room') || '';
-  };
 
-  const [joinCode, setJoinCode] = useState(getRoomFromUrl());
-  const [mode, setMode] = useState<'start' | 'join'>(getRoomFromUrl() ? 'join' : 'start');
+  return <MeetingApp currentPath={currentPath} />;
+}
+
+function MeetingApp({ currentPath }: { currentPath: string }) {
+  const urlRoom = getRoomFromLocation(currentPath);
+
+  const [joinCode, setJoinCode] = useState(urlRoom);
+  const [mode, setMode] = useState<'start' | 'join'>(urlRoom ? 'join' : 'start');
 
   // A refresh may resume only when this tab already has an active session for
   // this exact room. A new/shared URL has no matching session and must pre-join.
   const [activeRoom, setActiveRoom] = useState<RoomConnection | null>(() =>
-    getSavedRoomForReconnect(getRoomFromUrl())
+    getSavedRoomForReconnect(urlRoom)
   );
 
   const [pendingJoin, setPendingJoin] = useState<RoomConnection | null>(null);
   const [isAutoRejoining, setIsAutoRejoining] = useState(false);
+  const autoRejoinAttempted = useRef<string | null>(null);
+  const isPageUnloading = useRef(false);
 
   // Prepare a room from a shared/restored URL. This deliberately stops at the
   // pre-join screen; only its explicit Join action may activate the meeting.
   const isAuthenticated = !!useAuthStore(state => state.accessToken);
+  const setAccessToken = useAuthStore(state => state.setAccessToken);
+  const setStoredDisplayName = useAuthStore(state => state.setDisplayName);
+  const [sessionChecked, setSessionChecked] = useState(isAuthenticated);
+  const sessionReady = sessionChecked || isAuthenticated;
+
+  useEffect(() => {
+    const markPageUnloading = () => { isPageUnloading.current = true; };
+    window.addEventListener('pagehide', markPageUnloading);
+    window.addEventListener('beforeunload', markPageUnloading);
+    return () => {
+      window.removeEventListener('pagehide', markPageUnloading);
+      window.removeEventListener('beforeunload', markPageUnloading);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    let cancelled = false;
+    authApi.refresh().then(session => {
+      if (!cancelled) {
+        setAccessToken(session.access_token);
+        setStoredDisplayName(session.display_name);
+      }
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) setSessionChecked(true);
+    });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, setAccessToken, setStoredDisplayName]);
   
   useEffect(() => {
     // Background prefetch for degraded networks
@@ -77,14 +129,15 @@ export default function App() {
   }, [activeRoom, isAutoRejoining]);
 
   useEffect(() => {
-    const urlRoom = getRoomFromUrl();
-    if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining) {
+    if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining && autoRejoinAttempted.current !== urlRoom) {
+      autoRejoinAttempted.current = urlRoom;
       setIsAutoRejoining(true);
       roomsApi.joinRoom(urlRoom).then(joinData => {
         setPendingJoin({
           id: joinData.room_id,
           url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
           token: joinData.livekit_token,
+          e2eeKey: getE2EEKeyFromUrl(),
         });
       }).catch((err) => {
         console.error("Auto rejoin failed", err);
@@ -92,12 +145,13 @@ export default function App() {
         setIsAutoRejoining(false);
       });
     }
-  }, [isAuthenticated, activeRoom, pendingJoin, isAutoRejoining]);
+  }, [urlRoom, isAuthenticated, activeRoom, pendingJoin, isAutoRejoining]);
 
   useEffect(() => {
     if (activeRoom) {
       sessionStorage.setItem('activeRoom', JSON.stringify(activeRoom));
-      window.history.replaceState({}, '', `/${activeRoom.id}`); 
+      const fragment = activeRoom.e2eeKey ? `#key=${encodeURIComponent(activeRoom.e2eeKey)}` : '';
+      window.history.replaceState({}, '', `/${activeRoom.id}${fragment}`);
     } else {
       sessionStorage.removeItem('activeRoom');
       // Intentionally DO NOT clear the URL here. 
@@ -132,6 +186,7 @@ export default function App() {
         id: joinData.room_id,
         url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
         token: joinData.livekit_token,
+        canEnableE2EE: supportsMediaE2EE(),
       });
     } catch (err: any) {
       setLocalError(err.message || 'Failed to create room');
@@ -147,11 +202,19 @@ export default function App() {
     setIsJoining(true);
     
     let extracted = joinCode.trim();
+    let e2eeKey: string | undefined;
+    try {
+      const parsed = new URL(extracted, window.location.origin);
+      e2eeKey = new URLSearchParams(parsed.hash.replace(/^#/, '')).get('key') || undefined;
+    } catch {
+      // Treat non-URL input as a room code.
+    }
     if (extracted.includes('?room=')) {
       extracted = extracted.split('?room=')[1].split('&')[0];
     } else if (extracted.includes('/')) {
       extracted = extracted.split('/').filter(Boolean).pop() || extracted;
     }
+    extracted = extracted.split('#')[0];
     const formattedCode = extracted.toLowerCase().replace(/\s+/g, '-');
 
     try {
@@ -160,6 +223,7 @@ export default function App() {
         id: joinData.room_id,
         url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
         token: joinData.livekit_token,
+        e2eeKey,
       });
     } catch (err: any) {
       if (err.message && err.message.includes('not found')) {
@@ -186,7 +250,9 @@ export default function App() {
           roomId={activeRoom.id}
           token={activeRoom.token} 
           serverUrl={activeRoom.url} 
+          e2eeKey={activeRoom.e2eeKey}
           onDisconnected={() => {
+            if (isPageUnloading.current) return;
             setActiveRoom(null);
             window.history.replaceState({}, '', '/'); // ONLY clear URL when actually disconnected (intentional or fatal loop)
           }} 
@@ -200,12 +266,15 @@ export default function App() {
       <PreJoinScreen 
         displayName={savedDisplayName || displayName || "Guest"} 
         roomId={pendingJoin.id}
-        onJoin={(mic, cam, videoId, audioId) => {
+        encrypted={Boolean(pendingJoin.e2eeKey)}
+        encryptionSupported={supportsMediaE2EE()}
+        encryptionAvailable={Boolean(pendingJoin.canEnableE2EE)}
+        onJoin={(mic, cam, videoId, audioId, enableE2EE) => {
           if (videoId) sessionStorage.setItem('shroom_videoId', videoId);
           if (audioId) sessionStorage.setItem('shroom_audioId', audioId);
           sessionStorage.setItem('shroom_cam', cam.toString());
           sessionStorage.setItem('shroom_mic', mic.toString());
-          setActiveRoom(pendingJoin);
+          setActiveRoom(enableE2EE ? { ...pendingJoin, e2eeKey: generateE2EEKey() } : pendingJoin);
           setPendingJoin(null);
         }}
         onCancel={() => {
@@ -221,6 +290,15 @@ export default function App() {
       <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
         <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
         <p className="font-medium animate-pulse">Preparing your room...</p>
+      </div>
+    );
+  }
+
+  if (!sessionReady) {
+    return (
+      <div role="status" className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
+        <p className="font-medium">Restoring your session…</p>
       </div>
     );
   }

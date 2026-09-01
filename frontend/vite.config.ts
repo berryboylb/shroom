@@ -14,6 +14,15 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      '/rtc': {
+        target: 'http://localhost:7880',
+        ws: true,
+        changeOrigin: true,
+      },
+      '/twirp': {
+        target: 'http://localhost:7880',
+        changeOrigin: true,
+      },
     }
   },
   build: {

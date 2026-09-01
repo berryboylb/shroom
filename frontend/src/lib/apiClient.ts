@@ -9,7 +9,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+export async function apiClient<T>(endpoint: string, options: RequestInit = {}, mayRefresh = true): Promise<T> {
   const token = useAuthStore.getState().accessToken;
   
   const headers = new Headers(options.headers || {});
@@ -22,7 +22,18 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
   const response = await fetch(endpoint, {
     ...options,
     headers,
+    credentials: 'include',
   });
+
+  if (response.status === 401 && mayRefresh && endpoint !== '/api/auth/guest') {
+    const refresh = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+    if (refresh.ok) {
+      const data = await refresh.json() as { access_token: string };
+      useAuthStore.getState().setAccessToken(data.access_token);
+      return apiClient<T>(endpoint, options, false);
+    }
+    useAuthStore.getState().clearAuth();
+  }
 
   if (!response.ok) {
     let errorMessage = response.statusText;

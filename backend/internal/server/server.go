@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -50,12 +51,14 @@ func New(cfg *config.Config) *Server {
 	}
 
 	r := chi.NewRouter()
-	
+
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.NoCache)
+	r.Use(customMiddleware.SecurityHeaders)
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.Server.CORSAllowedOrigins,
@@ -69,17 +72,17 @@ func New(cfg *config.Config) *Server {
 	r.Use(httprate.LimitByIP(100, 1*time.Second))
 
 	r.Use(customMiddleware.Logging)
-	r.Use(customMiddleware.Metrics) 
+	r.Use(customMiddleware.Metrics)
 
 	tokenService := auth.NewTokenService(cfg.Server.JWTSecret)
 	authHandler := auth.NewHandler(tokenService)
 	roomRepo := room.NewRepository(dbConn)
 	roomService := room.NewService(roomRepo, cfg)
 	roomHandler := room.NewHandler(roomService)
-	
+
 	hub := ws.NewHub(redisClient.Raw())
 	go hub.Run()
-	wsHandler := ws.NewHandler(hub, tokenService)
+	wsHandler := ws.NewHandler(hub, tokenService, cfg.Server.CORSAllowedOrigins)
 
 	// Global request body size limit: 8KB max to prevent memory bomb attacks (M4)
 	r.Use(func(next http.Handler) http.Handler {
@@ -91,13 +94,18 @@ func New(cfg *config.Config) *Server {
 		})
 	})
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	healthHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
-	})
+	}
+	r.Get("/health", healthHandler)
+	r.Get("/api/health", healthHandler)
+	r.Get("/api/health/ready", sReadinessHandler(dbConn, redisClient, cfg.LiveKit.URL))
 
 	r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/api/auth/guest", authHandler.HandleGuestLogin)
+	r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/api/auth/refresh", authHandler.HandleRefresh)
+	r.Post("/api/auth/logout", authHandler.HandleLogout)
 
 	r.Get("/ws", wsHandler.ServeWS)
 	r.Post("/api/webhooks/livekit", roomHandler.HandleLiveKitWebhook)
@@ -108,6 +116,7 @@ func New(cfg *config.Config) *Server {
 		r.Post("/api/rooms/{id}/join", roomHandler.HandleJoinRoom)
 		r.Post("/api/telemetry", roomHandler.HandleTelemetry)
 		r.Get("/api/diagnostics", roomHandler.HandleDiagnostics)
+		r.Get("/api/admin/telemetry", roomHandler.HandleRecentTelemetry)
 
 		// Admin metrics — now behind JWT auth (C1)
 		r.Get("/api/admin/metrics", func(w http.ResponseWriter, r *http.Request) {
@@ -122,6 +131,8 @@ func New(cfg *config.Config) *Server {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"memory_alloc_mb":   memStats.Alloc / 1024 / 1024,
+				"memory_sys_mb":     memStats.Sys / 1024 / 1024,
+				"memory_budget_mb":  600,
 				"goroutines":        runtime.NumGoroutine(),
 				"active_rooms":      activeRooms,
 				"total_http_reqs":   customMiddleware.GlobalMetrics.TotalRequests,
@@ -138,6 +149,41 @@ func New(cfg *config.Config) *Server {
 		db:     dbConn,
 		redis:  redisClient,
 		hub:    hub,
+	}
+}
+
+func sReadinessHandler(dbConn *db.DB, redisClient *redis.Client, liveKitURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		components := map[string]string{"database": "error", "redis": "error", "livekit": "error"}
+		if dbConn != nil && dbConn.Pool.Ping(ctx) == nil {
+			components["database"] = "ok"
+		}
+		if redisClient != nil && redisClient.Raw().Ping(ctx).Err() == nil {
+			components["redis"] = "ok"
+		}
+
+		probeURL := strings.Replace(strings.Replace(liveKitURL, "wss://", "https://", 1), "ws://", "http://", 1)
+		if probeURL != "" {
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet, probeURL, nil)
+			if response, err := http.DefaultClient.Do(req); err == nil {
+				components["livekit"] = "ok"
+				response.Body.Close()
+			}
+		}
+
+		status := "ready"
+		code := http.StatusOK
+		for _, component := range components {
+			if component != "ok" {
+				status, code = "error", http.StatusServiceUnavailable
+				break
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		json.NewEncoder(w).Encode(map[string]any{"status": status, "components": components})
 	}
 }
 

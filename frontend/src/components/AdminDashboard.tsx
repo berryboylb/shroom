@@ -7,6 +7,8 @@ import { authApi } from '../api/auth';
 
 interface Metrics {
   memory_alloc_mb: number;
+  memory_sys_mb: number;
+  memory_budget_mb: number;
   goroutines: number;
   active_rooms: number;
   total_http_reqs: number;
@@ -15,8 +17,18 @@ interface Metrics {
   uptime_seconds: number;
 }
 
+interface TelemetryReport {
+  roomId: string;
+  participantName: string;
+  quality: string;
+  receivedAt: string;
+  metrics: { rttMs: number; packetLossPercent: number; candidateType: string; codec: string };
+}
+
+interface TelemetryResponse { reports: TelemetryReport[]; capacity: number }
+
 // Authenticated fetcher that sends the JWT token
-const createFetcher = (token: string) => (url: string) =>
+const createFetcher = (token: string) => (url: string): Promise<any> =>
   fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   }).then(res => {
@@ -94,9 +106,13 @@ export function AdminDashboard() {
   return <AdminDashboardContent fetcher={fetcher} />;
 }
 
-function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<Metrics> }) {
+function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<any> }) {
   const { data: metrics, error } = useSWR<Metrics>('/api/admin/metrics', fetcher, {
     refreshInterval: 3000,
+    revalidateOnFocus: true,
+  });
+  const { data: telemetry } = useSWR<TelemetryResponse>('/api/admin/telemetry', fetcher, {
+    refreshInterval: 10_000,
     revalidateOnFocus: true,
   });
 
@@ -149,9 +165,9 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <MetricCard 
               icon={<Server className="w-6 h-6 text-blue-400" />}
-              title="Memory Usage (Go)"
-              value={`${metrics.memory_alloc_mb} MB`}
-              trend="Allocated"
+              title="Go Memory"
+              value={`${metrics.memory_sys_mb} MB`}
+              trend={`${metrics.memory_alloc_mb} MB active · ${metrics.memory_budget_mb} MB product cap`}
             />
             <MetricCard 
               icon={<Users className="w-6 h-6 text-indigo-400" />}
@@ -184,6 +200,31 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
               <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
             </div>
           )
+        )}
+
+        {telemetry && telemetry.reports.length > 0 && (
+          <section aria-labelledby="quality-heading" className="mt-10 rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 id="quality-heading" className="text-xl font-bold">Recent call quality</h2>
+              <span className="text-sm text-slate-400">Bounded to {telemetry.capacity} reports</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-slate-400"><tr><th className="p-2">Room</th><th className="p-2">Quality</th><th className="p-2">RTT</th><th className="p-2">Loss</th><th className="p-2">Route</th></tr></thead>
+                <tbody>
+                  {telemetry.reports.slice(0, 20).map((report, index) => (
+                    <tr key={`${report.receivedAt}-${index}`} className="border-t border-slate-800">
+                      <td className="p-2 font-mono">{report.roomId}</td>
+                      <td className="p-2 capitalize">{report.quality}</td>
+                      <td className="p-2">{Math.round(report.metrics.rttMs)} ms</td>
+                      <td className="p-2">{report.metrics.packetLossPercent.toFixed(1)}%</td>
+                      <td className="p-2">{report.metrics.candidateType || 'unknown'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         )}
       </div>
     </div>

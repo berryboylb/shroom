@@ -16,15 +16,6 @@ export function EmojiReactions() {
   const [isExpanded, setIsExpanded] = useState(false);
   const { localParticipant } = useLocalParticipant();
 
-  useDataChannel((msg) => {
-    try {
-      const data = JSON.parse(new TextDecoder().decode(msg.payload));
-      if (data.type === 'reaction') {
-        spawnReaction(data.emoji);
-      }
-    } catch (e) {}
-  });
-
   const spawnReaction = useCallback((emoji: string) => {
     const id = Math.random().toString(36).substr(2, 9);
     const x = Math.random() * 100 - 50; 
@@ -34,6 +25,15 @@ export function EmojiReactions() {
       setReactions(prev => prev.filter(r => r.id !== id));
     }, 2000);
   }, []);
+
+  useDataChannel((msg) => {
+    try {
+      const data = JSON.parse(new TextDecoder().decode(msg.payload));
+      if (data.type === 'reaction') {
+        spawnReaction(data.emoji);
+      }
+    } catch {}
+  });
 
   const sendReaction = useCallback((emoji: string) => {
     if (!localParticipant) return;
@@ -70,6 +70,8 @@ export function EmojiReactions() {
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
               onClick={() => setIsExpanded(true)}
+              aria-label="Open reactions"
+              aria-expanded={isExpanded}
               className="bg-slate-900/80 backdrop-blur-xl p-3 rounded-full border border-slate-700/50 shadow-2xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
             >
               <SmilePlus className="w-6 h-6" />
@@ -85,6 +87,7 @@ export function EmojiReactions() {
                 <button
                   key={emoji}
                   onClick={() => sendReaction(emoji)}
+                  aria-label={`Send ${emoji} reaction`}
                   className="w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-slate-700/80 active:scale-90 transition-all text-lg sm:text-xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {emoji}
@@ -93,6 +96,7 @@ export function EmojiReactions() {
               <div className="w-px h-6 bg-slate-700/50 mx-1"></div>
               <button 
                 onClick={() => setIsExpanded(false)}
+                aria-label="Close reactions"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/80 transition-colors"
               >
                 <X className="w-5 h-5" />

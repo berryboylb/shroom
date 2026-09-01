@@ -19,17 +19,45 @@ type Claims struct {
 	UserID      string `json:"user_id"`
 	DisplayName string `json:"display_name"`
 	IsGuest     bool   `json:"is_guest"`
+	TokenType   string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
 func (s *TokenService) GenerateGuestToken(displayName string) (string, error) {
+	return s.generateToken(uuid.NewString(), displayName, "access", 15*time.Minute)
+}
+
+func (s *TokenService) GenerateGuestSession(displayName string) (accessToken string, refreshToken string, err error) {
+	userID := uuid.NewString()
+	accessToken, err = s.generateToken(userID, displayName, "access", 15*time.Minute)
+	if err != nil {
+		return "", "", err
+	}
+	refreshToken, err = s.generateToken(userID, displayName, "refresh", 24*time.Hour)
+	return accessToken, refreshToken, err
+}
+
+func (s *TokenService) RefreshAccessToken(refreshToken string) (string, error) {
+	claims, err := s.ValidateToken(refreshToken)
+	if err != nil || claims.TokenType != "refresh" {
+		return "", jwt.ErrTokenInvalidClaims
+	}
+	return s.generateToken(claims.UserID, claims.DisplayName, "access", 15*time.Minute)
+}
+
+func (s *TokenService) generateToken(userID, displayName, tokenType string, ttl time.Duration) (string, error) {
+	now := time.Now()
 	claims := Claims{
-		UserID:      uuid.NewString(),
+		UserID:      userID,
 		DisplayName: displayName,
 		IsGuest:     true,
+		TokenType:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "shroom",
+			Subject:   userID,
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
 		},
 	}
 
@@ -40,7 +68,7 @@ func (s *TokenService) GenerateGuestToken(displayName string) (string, error) {
 func (s *TokenService) ValidateToken(tokenStr string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		return s.secret, nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithIssuer("shroom"))
 
 	if err != nil {
 		return nil, err

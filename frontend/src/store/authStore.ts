@@ -21,6 +21,12 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'shroom-auth',
       storage: createJSONStorage(() => sessionStorage),
+      partialize: state => ({ displayName: state.displayName }),
+      merge: (persisted, current) => ({
+        ...current,
+        displayName: (persisted as Partial<AuthState>)?.displayName ?? null,
+        accessToken: null,
+      }),
     }
   )
 );

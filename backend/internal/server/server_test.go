@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +22,8 @@ func TestHealthCheck(t *testing.T) {
 		t.Errorf("Expected 200 OK, got %d", rr.Code)
 	}
 
-	if rr.Body.String() != "OK" {
-		t.Errorf("Expected 'OK', got %s", rr.Body.String())
+	var body map[string]string
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil || body["status"] != "ok" {
+		t.Errorf("Expected JSON health response, got %s", rr.Body.String())
 	}
 }

@@ -12,7 +12,9 @@ export function DeviceStateSync() {
       const isCamOn = localParticipant.isCameraEnabled;
 
       sessionStorage.setItem('shroom_mic', isMicOn ? 'true' : 'false');
-      sessionStorage.setItem('shroom_cam', isCamOn ? 'true' : 'false');
+      if (sessionStorage.getItem('shroom_adaptive_video_paused') !== 'true') {
+        sessionStorage.setItem('shroom_cam', isCamOn ? 'true' : 'false');
+      }
     };
 
     // Initial sync

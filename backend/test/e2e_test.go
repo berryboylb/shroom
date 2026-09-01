@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +18,15 @@ import (
 )
 
 func TestE2EFlow(t *testing.T) {
+	connection, err := net.DialTimeout("tcp", "localhost:5433", 300*time.Millisecond)
+	if err != nil {
+		if os.Getenv("REQUIRE_INTEGRATION") == "1" {
+			t.Fatalf("PostgreSQL integration dependency is unavailable: %v", err)
+		}
+		t.Skipf("PostgreSQL is not running; set REQUIRE_INTEGRATION=1 to make this a required gate: %v", err)
+	}
+	connection.Close()
+
 	// 1. Setup Test Server
 	cfg := &config.Config{
 		Server: config.ServerConfig{
@@ -104,7 +115,7 @@ func TestE2EFlow(t *testing.T) {
 			"token": token,
 		},
 	})
-	
+
 	ws.SetReadDeadline(time.Now().Add(2 * time.Second))
 	var authAck map[string]interface{}
 	if err := ws.ReadJSON(&authAck); err != nil {
@@ -122,13 +133,20 @@ func TestE2EFlow(t *testing.T) {
 		},
 	})
 
-	// 8. Receive participant:joined broadcast
+	// 8. Receive the authoritative raised-hand queue snapshot.
 	ws.SetReadDeadline(time.Now().Add(2 * time.Second))
 	var wsResp map[string]interface{}
 	if err := ws.ReadJSON(&wsResp); err != nil {
 		t.Fatalf("Failed to read WS message: %v", err)
 	}
+	if wsResp["type"] != "hand_queue:updated" {
+		t.Fatalf("Expected hand_queue:updated snapshot, got %v", wsResp["type"])
+	}
 
+	// 9. Receive participant:joined broadcast.
+	if err := ws.ReadJSON(&wsResp); err != nil {
+		t.Fatalf("Failed to read participant broadcast: %v", err)
+	}
 	if wsResp["type"] != "participant:joined" {
 		t.Fatalf("Expected participant:joined broadcast, got %v", wsResp["type"])
 	}

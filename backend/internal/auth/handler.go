@@ -22,6 +22,7 @@ type GuestLoginRequest struct {
 
 type LoginResponse struct {
 	AccessToken string `json:"access_token"`
+	DisplayName string `json:"display_name"`
 }
 
 // stripHTMLTags removes any HTML tags from a string to prevent XSS
@@ -49,22 +50,55 @@ func (h *Handler) HandleGuestLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.tokenService.GenerateGuestToken(req.DisplayName)
+	accessToken, refreshToken, err := h.tokenService.GenerateGuestSession(req.DisplayName)
 	if err != nil {
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    token,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-		Path:     "/",
-		Expires:  time.Now().Add(24 * time.Hour),
-	})
+	setRefreshCookie(w, r, refreshToken, time.Now().Add(24*time.Hour))
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(LoginResponse{AccessToken: token})
+	json.NewEncoder(w).Encode(LoginResponse{AccessToken: accessToken, DisplayName: req.DisplayName})
+}
+
+func (h *Handler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, validationErr := h.tokenService.ValidateToken(cookie.Value)
+	accessToken, err := h.tokenService.RefreshAccessToken(cookie.Value)
+	if validationErr != nil || err != nil {
+		setRefreshCookie(w, r, "", time.Unix(0, 0))
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(LoginResponse{AccessToken: accessToken, DisplayName: claims.DisplayName})
+}
+
+func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	setRefreshCookie(w, r, "", time.Unix(0, 0))
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func setRefreshCookie(w http.ResponseWriter, r *http.Request, value string, expires time.Time) {
+	secure := r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    value,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+		Expires:  expires,
+		MaxAge: func() int {
+			if value == "" {
+				return -1
+			}
+			return int(time.Until(expires).Seconds())
+		}(),
+	})
 }

@@ -24,7 +24,7 @@ export const playJoinChime = () => {
 
     playNote(1046.50, 0); // C6
     playNote(1318.51, 0.15); // E6
-  } catch (e) {}
+  } catch {}
 };
 
 export const playLeaveChime = () => {
@@ -53,5 +53,5 @@ export const playLeaveChime = () => {
 
     playNote(1046.50, 0); // C6
     playNote(880.00, 0.15); // A5
-  } catch (e) {}
+  } catch {}
 };

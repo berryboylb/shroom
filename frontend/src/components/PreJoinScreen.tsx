@@ -6,11 +6,14 @@ import { ShroomLogo } from './ShroomLogo';
 interface Props {
   roomId: string;
   displayName: string;
-  onJoin: (micEnabled: boolean, camEnabled: boolean, videoId?: string, audioId?: string) => void;
+  encrypted?: boolean;
+  encryptionSupported?: boolean;
+  encryptionAvailable?: boolean;
+  onJoin: (micEnabled: boolean, camEnabled: boolean, videoId?: string, audioId?: string, enableE2EE?: boolean) => void;
   onCancel: () => void;
 }
 
-export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
+export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported = true, encryptionAvailable = false, onJoin, onCancel }: Props) {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   
@@ -19,6 +22,7 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
   const [selectedVideo, setSelectedVideo] = useState<string>('');
   const [selectedAudio, setSelectedAudio] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
+  const [enableE2EE, setEnableE2EE] = useState(false);
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState('');
@@ -116,6 +120,8 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
           </div>
           <button 
             onClick={() => setShowSettings(!showSettings)}
+            aria-label="Device settings"
+            aria-expanded={showSettings}
             className={`p-2 rounded-xl transition-colors ${showSettings ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
           >
             <><Settings2 className="w-5 h-5" /> <span className="text-sm font-bold hidden sm:inline">Device Settings</span></>
@@ -142,12 +148,14 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
             <button
               onClick={() => setMicEnabled(!micEnabled)}
+              aria-label={micEnabled ? 'Turn microphone off' : 'Turn microphone on'}
               className={`p-4 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${micEnabled ? 'bg-slate-800/80 text-white backdrop-blur-md hover:bg-slate-700' : 'bg-red-500 text-white'}`}
             >
               {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
             </button>
             <button
               onClick={() => setCamEnabled(!camEnabled)}
+              aria-label={camEnabled ? 'Turn camera off' : 'Turn camera on'}
               className={`p-4 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${camEnabled ? 'bg-slate-800/80 text-white backdrop-blur-md hover:bg-slate-700' : 'bg-red-500 text-white'}`}
             >
               {camEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
@@ -167,6 +175,7 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Camera</label>
                   <select 
+                    aria-label="Camera"
                     value={selectedVideo} 
                     onChange={handleVideoChange}
                     className="w-full bg-slate-900 border border-slate-800 text-sm text-white rounded-xl p-3 outline-none focus:border-blue-500 transition-colors"
@@ -179,6 +188,7 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Microphone</label>
                   <select 
+                    aria-label="Microphone"
                     value={selectedAudio} 
                     onChange={handleAudioChange}
                     className="w-full bg-slate-900 border border-slate-800 text-sm text-white rounded-xl p-3 outline-none focus:border-blue-500 transition-colors"
@@ -194,9 +204,24 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
         </AnimatePresence>
 
         {error && (
-          <p className="text-amber-400 text-sm font-medium mb-6 bg-amber-400/10 py-2 px-4 rounded-lg w-full text-center">
+          <p role="alert" className="text-amber-400 text-sm font-medium mb-6 bg-amber-400/10 py-2 px-4 rounded-lg w-full text-center">
             {error}
           </p>
+        )}
+
+        {(encrypted || encryptionAvailable) && (
+          <div className="mb-5 w-full rounded-xl border border-emerald-700/50 bg-emerald-950/30 p-3 text-sm text-emerald-200">
+            {encrypted && encryptionSupported ? (
+              <p><strong>End-to-end encrypted room.</strong> The media key came from the private part of your invite link.</p>
+            ) : encrypted ? (
+              <p role="alert"><strong>This encrypted room needs a compatible browser.</strong> Open the link in a current Chrome, Edge, or Firefox release.</p>
+            ) : (
+              <label className="flex cursor-pointer items-start gap-3">
+                <input type="checkbox" checked={enableE2EE} onChange={event => setEnableE2EE(event.target.checked)} className="mt-1 h-5 w-5" />
+                <span><strong>Use end-to-end encryption</strong><br />Invitees need a compatible browser and the complete private link.</span>
+              </label>
+            )}
+          </div>
         )}
 
         <div className="w-full flex gap-4">
@@ -207,7 +232,8 @@ export function PreJoinScreen({ roomId, onJoin, onCancel }: Props) {
             Cancel
           </button>
           <button
-            onClick={() => onJoin(micEnabled, camEnabled, selectedVideo, selectedAudio)}
+            onClick={() => onJoin(micEnabled, camEnabled, selectedVideo, selectedAudio, enableE2EE)}
+            disabled={encrypted && !encryptionSupported}
             className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
           >
             Join <span className="truncate max-w-[100px] sm:max-w-[150px] inline-block align-bottom">{roomId}</span> <ArrowRight className="w-5 h-5" />

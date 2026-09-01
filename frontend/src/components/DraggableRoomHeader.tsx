@@ -13,7 +13,7 @@ export function DraggableRoomHeader({ roomId }: Props) {
 
   const copyCode = async () => {
     try {
-      const inviteLink = `${window.location.origin}/?room=${roomId}`;
+      const inviteLink = `${window.location.origin}/?room=${roomId}${window.location.hash}`;
       await navigator.clipboard.writeText(inviteLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
