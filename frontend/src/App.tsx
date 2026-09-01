@@ -11,6 +11,28 @@ import { ShroomLogo } from './components/ShroomLogo';
 
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
+type RoomConnection = { id: string; url: string; token: string };
+
+function getSavedRoomForReconnect(urlRoom: string): RoomConnection | null {
+  if (!urlRoom) return null;
+
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('activeRoom') || 'null');
+    if (
+      saved &&
+      saved.id === urlRoom &&
+      typeof saved.url === 'string' &&
+      typeof saved.token === 'string'
+    ) {
+      return saved;
+    }
+  } catch {
+    // Invalid or stale session data must fall back to the privacy-safe pre-join flow.
+  }
+
+  return null;
+}
+
 export default function App() {
   const currentPath = window.location.pathname.replace(/^\/+/, '');
   
@@ -30,23 +52,17 @@ export default function App() {
   const [joinCode, setJoinCode] = useState(getRoomFromUrl());
   const [mode, setMode] = useState<'start' | 'join'>(getRoomFromUrl() ? 'join' : 'start');
 
-  const [activeRoom, setActiveRoom] = useState<{ id: string; url: string; token: string } | null>(() => {
-    try {
-      const saved = sessionStorage.getItem('activeRoom');
-      if (!saved) return null;
-      const parsed = JSON.parse(saved);
-      const urlRoom = getRoomFromUrl();
-      if (urlRoom && urlRoom !== parsed.id) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  });
+  // A refresh may resume only when this tab already has an active session for
+  // this exact room. A new/shared URL has no matching session and must pre-join.
+  const [activeRoom, setActiveRoom] = useState<RoomConnection | null>(() =>
+    getSavedRoomForReconnect(getRoomFromUrl())
+  );
 
-  const [pendingJoin, setPendingJoin] = useState<{ id: string; token: string; url: string } | null>(null);
+  const [pendingJoin, setPendingJoin] = useState<RoomConnection | null>(null);
   const [isAutoRejoining, setIsAutoRejoining] = useState(false);
 
-  // Auto-rejoin logic: if URL has a room, and we are authenticated, but not in a room yet
+  // Prepare a room from a shared/restored URL. This deliberately stops at the
+  // pre-join screen; only its explicit Join action may activate the meeting.
   const isAuthenticated = !!useAuthStore(state => state.accessToken);
   
   useEffect(() => {
@@ -65,8 +81,7 @@ export default function App() {
     if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining) {
       setIsAutoRejoining(true);
       roomsApi.joinRoom(urlRoom).then(joinData => {
-        // Skip PreJoin and go straight into the room for refreshes
-        setActiveRoom({
+        setPendingJoin({
           id: joinData.room_id,
           url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
           token: joinData.livekit_token,
@@ -205,7 +220,7 @@ export default function App() {
     return (
       <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
         <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
-        <p className="font-medium animate-pulse">Reconnecting to your room...</p>
+        <p className="font-medium animate-pulse">Preparing your room...</p>
       </div>
     );
   }
