@@ -47,7 +47,7 @@ export function DeviceRecovery() {
 
   if (!message) return null;
   return (
-    <div role="status" aria-live="assertive" className="absolute bottom-28 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-xl">
+    <div role="status" aria-live="assertive" className="shroom-call-notice shroom-device-notice">
       {message}
     </div>
   );

@@ -61,29 +61,31 @@ function AdminLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-8 font-sans">
+    <div className="shroom-admin flex min-h-[100dvh] items-center justify-center p-5 text-white font-sans sm:p-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="shroom-mark mx-auto mb-4">
             <ShroomLogo className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">Admin Access</h1>
-          <p className="text-slate-400 text-sm mt-2">Authenticate to view system metrics</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Admin access</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Authenticate to view system metrics.</p>
         </div>
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="shroom-admin-card space-y-4">
+          <label htmlFor="admin-name" className="shroom-eyebrow">Display name</label>
           <input
+            id="admin-name"
             type="text"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none placeholder:text-slate-500"
-            placeholder="Enter your name"
+            className="shroom-input w-full"
+            placeholder="Your display name"
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={isLoading || !name.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50"
+            className="shroom-primary-button w-full"
           >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
           </button>
@@ -124,29 +126,30 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8 font-sans">
+    <div className="shroom-admin min-h-[100dvh] p-4 text-white font-sans sm:p-8">
       <div className="max-w-5xl mx-auto">
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 sm:gap-0">
+        <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:items-center">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => window.location.href = '/'}
-              className="p-3 bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors"
+              className="shroom-header-button grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+              aria-label="Back to home"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="shroom-mark">
               <ShroomLogo className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">System Metrics</h1>
-              <p className="text-slate-400 font-medium text-xs sm:text-sm mt-1">Live telemetry • Ultra-low footprint</p>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">System metrics</h1>
+              <p className="mt-1 text-xs font-medium text-slate-400 sm:text-sm">Live telemetry · Updated automatically</p>
             </div>
           </div>
           
           {metrics && (
-            <div className="text-left sm:text-right w-full sm:w-auto">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-full font-bold text-sm border border-emerald-500/20">
+            <div className="w-full text-left sm:w-auto sm:text-right">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 sm:px-4 sm:text-sm">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 Uptime: {formatUptime(metrics.uptime_seconds)}
               </div>
@@ -155,14 +158,14 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl flex items-center gap-3 mb-8">
+          <div className="shroom-error mb-8">
             <AlertTriangle className="w-5 h-5" />
             <span className="font-medium">Connection to telemetry lost. Retrying...</span>
           </div>
         )}
 
         {metrics ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="shroom-metric-grid">
             <MetricCard 
               icon={<Server className="w-6 h-6 text-blue-400" />}
               title="Go Memory"
@@ -170,7 +173,7 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
               trend={`${metrics.memory_alloc_mb} MB active · ${metrics.memory_budget_mb} MB product cap`}
             />
             <MetricCard 
-              icon={<Users className="w-6 h-6 text-indigo-400" />}
+              icon={<Users className="w-6 h-6 text-blue-300" />}
               title="Active Rooms"
               value={metrics.active_rooms.toString()}
               trend="Postgres"
@@ -182,7 +185,7 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
               trend={`${metrics.total_http_errs} errors`}
             />
             <MetricCard 
-              icon={<Activity className="w-6 h-6 text-purple-400" />}
+              icon={<Activity className="w-6 h-6 text-cyan-300" />}
               title="Active Goroutines"
               value={metrics.goroutines.toLocaleString()}
               trend="Threads"
@@ -203,14 +206,29 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
         )}
 
         {telemetry && telemetry.reports.length > 0 && (
-          <section aria-labelledby="quality-heading" className="mt-10 rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 id="quality-heading" className="text-xl font-bold">Recent call quality</h2>
-              <span className="text-sm text-slate-400">Bounded to {telemetry.capacity} reports</span>
+          <section aria-labelledby="quality-heading" className="shroom-admin-card mt-8 p-4 sm:mt-10 sm:p-6">
+            <div className="mb-4 flex flex-col items-start justify-between gap-1 sm:flex-row sm:items-center sm:gap-4">
+              <h2 id="quality-heading" className="text-lg font-semibold sm:text-xl">Recent call quality</h2>
+              <span className="text-xs text-slate-400 sm:text-sm">Latest {telemetry.capacity} reports retained</span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-slate-400"><tr><th className="p-2">Room</th><th className="p-2">Quality</th><th className="p-2">RTT</th><th className="p-2">Loss</th><th className="p-2">Route</th></tr></thead>
+            <div className="space-y-3 sm:hidden">
+              {telemetry.reports.slice(0, 20).map((report, index) => (
+                <article key={`${report.receivedAt}-mobile-${index}`} className="rounded-xl border border-white/10 bg-black/10 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate font-mono text-sm font-semibold text-white">{report.roomId}</span>
+                    <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-semibold capitalize text-blue-200">{report.quality}</span>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div><dt className="text-slate-500">RTT</dt><dd className="mt-1 text-slate-200">{Math.round(report.metrics.rttMs)} ms</dd></div>
+                    <div><dt className="text-slate-500">Loss</dt><dd className="mt-1 text-slate-200">{report.metrics.packetLossPercent.toFixed(1)}%</dd></div>
+                    <div><dt className="text-slate-500">Route</dt><dd className="mt-1 text-slate-200">{report.metrics.candidateType || 'unknown'}</dd></div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[34rem] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-slate-400"><tr><th className="p-2 font-semibold">Room</th><th className="p-2 font-semibold">Quality</th><th className="p-2 font-semibold">RTT</th><th className="p-2 font-semibold">Loss</th><th className="p-2 font-semibold">Route</th></tr></thead>
                 <tbody>
                   {telemetry.reports.slice(0, 20).map((report, index) => (
                     <tr key={`${report.receivedAt}-${index}`} className="border-t border-slate-800">
@@ -233,18 +251,15 @@ function AdminDashboardContent({ fetcher }: { fetcher: (url: string) => Promise<
 
 function MetricCard({ icon, title, value, trend }: any) {
   return (
-    <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
-      <div className="absolute -right-4 -top-4 bg-slate-800/30 w-24 h-24 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-3 bg-slate-950 rounded-2xl shadow-inner border border-slate-800">
+    <div className="shroom-metric-card relative overflow-hidden">
+      <div className="mb-3 flex items-center justify-between sm:mb-4">
+        <div className="shroom-metric-icon">
           {icon}
         </div>
       </div>
-      <p className="text-slate-400 font-medium text-sm mb-1">{title}</p>
-      <div className="flex items-end justify-between">
-        <h3 className="text-4xl font-bold text-white tracking-tight">{value}</h3>
-        <span className="text-sm font-bold text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">{trend}</span>
-      </div>
+      <p className="mb-1 text-sm font-medium text-slate-400">{title}</p>
+      <h3 className="break-words text-3xl font-semibold tracking-tight text-white sm:text-4xl">{value}</h3>
+      <p className="mt-3 text-xs font-medium leading-5 text-slate-500">{trend}</p>
     </div>
   );
 }

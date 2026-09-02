@@ -5,9 +5,8 @@ import { roomsApi } from './api/rooms';
 import { authApi } from './api/auth';
 
 const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
-import { PreJoinScreen } from './components/PreJoinScreen';
-import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+const PreJoinScreen = lazy(() => import('./components/PreJoinScreen').then(m => ({ default: m.PreJoinScreen })));
+import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
 import { ShroomLogo } from './components/ShroomLogo';
 
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -90,9 +89,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   const isAuthenticated = !!useAuthStore(state => state.accessToken);
   const setAccessToken = useAuthStore(state => state.setAccessToken);
   const setStoredDisplayName = useAuthStore(state => state.setDisplayName);
-  const [sessionChecked, setSessionChecked] = useState(isAuthenticated);
-  const sessionReady = sessionChecked || isAuthenticated;
-
+  const savedDisplayName = useAuthStore(state => state.displayName);
   useEffect(() => {
     const markPageUnloading = () => { isPageUnloading.current = true; };
     window.addEventListener('pagehide', markPageUnloading);
@@ -104,29 +101,19 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) return;
+    // A clean visitor has no session hint, so avoid an expected 401 request.
+    // Returning visitors keep their display name in this tab and can refresh
+    // the HttpOnly session without delaying the public landing page.
+    if (isAuthenticated || !savedDisplayName) return;
     let cancelled = false;
     authApi.refresh().then(session => {
       if (!cancelled) {
         setAccessToken(session.access_token);
         setStoredDisplayName(session.display_name);
       }
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) setSessionChecked(true);
-    });
+    }).catch(() => {});
     return () => { cancelled = true; };
-  }, [isAuthenticated, setAccessToken, setStoredDisplayName]);
-  
-  useEffect(() => {
-    // Background prefetch for degraded networks
-    if (!activeRoom && !isAutoRejoining) {
-      const timer = setTimeout(() => {
-        // Silently download the 133kB WebRTC engine in the background
-        import('./components/Room');
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [activeRoom, isAutoRejoining]);
+  }, [isAuthenticated, savedDisplayName, setAccessToken, setStoredDisplayName]);
 
   useEffect(() => {
     if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining && autoRejoinAttempted.current !== urlRoom) {
@@ -165,7 +152,6 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
 
   const { loginGuest, isLoggingIn, loginError } = useAuth();
   
-  const savedDisplayName = useAuthStore(state => state.displayName);
   const [displayName, setDisplayName] = useState(savedDisplayName || '');
 
   const handleJoinLobby = async (e: React.FormEvent) => {
@@ -253,8 +239,19 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
           e2eeKey={activeRoom.e2eeKey}
           onDisconnected={() => {
             if (isPageUnloading.current) return;
-            setActiveRoom(null);
-            window.history.replaceState({}, '', '/'); // ONLY clear URL when actually disconnected (intentional or fatal loop)
+            // A transport drop is handled by LiveKit's reconnect loop. Keep
+            // the room mounted so the reconnect overlay can reassure the user
+            // instead of throwing them back to the lobby.
+            if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+            // Give LiveKit a short recovery window before tearing down the
+            // room UI. This prevents a transport blip from exposing pre-join
+            // controls or losing the auto-rejoin context.
+            window.setTimeout(() => {
+              if (navigator.onLine) {
+                setActiveRoom(null);
+                window.history.replaceState({}, '', '/');
+              }
+            }, 10_000);
           }} 
         />
       </Suspense>
@@ -263,25 +260,27 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
 
   if (pendingJoin) {
     return (
-      <PreJoinScreen 
-        displayName={savedDisplayName || displayName || "Guest"} 
-        roomId={pendingJoin.id}
-        encrypted={Boolean(pendingJoin.e2eeKey)}
-        encryptionSupported={supportsMediaE2EE()}
-        encryptionAvailable={Boolean(pendingJoin.canEnableE2EE)}
-        onJoin={(mic, cam, videoId, audioId, enableE2EE) => {
-          if (videoId) sessionStorage.setItem('shroom_videoId', videoId);
-          if (audioId) sessionStorage.setItem('shroom_audioId', audioId);
-          sessionStorage.setItem('shroom_cam', cam.toString());
-          sessionStorage.setItem('shroom_mic', mic.toString());
-          setActiveRoom(enableE2EE ? { ...pendingJoin, e2eeKey: generateE2EEKey() } : pendingJoin);
-          setPendingJoin(null);
-        }}
-        onCancel={() => {
-          setPendingJoin(null);
-          window.history.replaceState({}, '', '/');
-        }}
-      />
+      <Suspense fallback={<div role="status" className="min-h-[100dvh] bg-slate-950 flex items-center justify-center text-slate-400"><Loader2 className="h-8 w-8 animate-spin text-blue-500" /><span className="sr-only">Preparing device check</span></div>}>
+        <PreJoinScreen 
+          displayName={savedDisplayName || displayName || "Guest"} 
+          roomId={pendingJoin.id}
+          encrypted={Boolean(pendingJoin.e2eeKey)}
+          encryptionSupported={supportsMediaE2EE()}
+          encryptionAvailable={Boolean(pendingJoin.canEnableE2EE)}
+          onJoin={(mic, cam, videoId, audioId, enableE2EE) => {
+            if (videoId) sessionStorage.setItem('shroom_videoId', videoId);
+            if (audioId) sessionStorage.setItem('shroom_audioId', audioId);
+            sessionStorage.setItem('shroom_cam', cam.toString());
+            sessionStorage.setItem('shroom_mic', mic.toString());
+            setActiveRoom(enableE2EE ? { ...pendingJoin, e2eeKey: generateE2EEKey() } : pendingJoin);
+            setPendingJoin(null);
+          }}
+          onCancel={() => {
+            setPendingJoin(null);
+            window.history.replaceState({}, '', '/');
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -294,174 +293,140 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
     );
   }
 
-  if (!sessionReady) {
-    return (
-      <div role="status" className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
-        <p className="font-medium">Restoring your session…</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
-      <div className="absolute top-0 w-full h-[500px] bg-gradient-to-b from-blue-500/10 dark:from-blue-600/20 to-transparent pointer-events-none" />
-      
-      <div className="absolute top-[env(safe-area-inset-top,1.5rem)] right-4 sm:top-6 sm:right-6 z-50">
-        <button 
-          onClick={() => document.documentElement.classList.toggle('dark')}
-          className="p-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 transition-all text-xl"
-          aria-label="Toggle Dark Mode"
-        >
-          🌓
-        </button>
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[420px] px-6 relative z-10"
-      >
-        <div className="text-center mb-10">
-          <motion.div 
-            whileHover={{ scale: 1.05, rotate: -5 }}
-            className="w-20 h-20 bg-blue-600 text-white rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-blue-500/20"
-          >
-            <ShroomLogo className="w-10 h-10" />
-          </motion.div>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white mb-3">
-            Shroom
-          </h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
-            Jump in. Zero friction. 🚀
-          </p>
+    <main className="shroom-home min-h-[100dvh] overflow-hidden px-5 py-6 text-white sm:px-8 sm:py-8">
+      <div className="shroom-noise" aria-hidden="true" />
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center">
+        <div className="flex items-center gap-3">
+          <div className="shroom-mark"><ShroomLogo className="h-5 w-5" /></div>
+          <span className="shroom-wordmark text-lg">Shroom</span>
         </div>
+      </header>
 
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-2xl shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-800 relative overflow-hidden">
-          
-          <AnimatePresence mode="wait">
+      <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-7rem)] w-full max-w-6xl items-center gap-14 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20 lg:py-16">
+        <div className="shroom-home-content max-w-xl">
+          <h1 className="shroom-home-title max-w-[12ch] text-[clamp(3.5rem,6vw,5.5rem)] font-semibold leading-[.98] tracking-[-0.04em] text-white">
+            Meet without<br /><span className="text-shroom-primary">the friction.</span>
+          </h1>
+          <p className="shroom-home-copy mt-6 max-w-md text-base text-white/55 sm:text-lg">Start or join a room from any browser. No downloads, no complicated setup.</p>
+
+          <div className="shroom-entry-shell mt-10 max-w-md">
             {!isAuthenticated ? (
-              <motion.form 
-                key="login"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+              <form 
                 onSubmit={handleJoinLobby} 
-                className="space-y-6"
+                className="shroom-entry-card shroom-panel-enter space-y-5"
               >
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 ml-1 uppercase tracking-wide">
-                    What's your name?
-                  </label>
+                <div><label className="shroom-eyebrow" htmlFor="display-name">First, what should we call you?</label>
                   <input
+                    id="display-name"
                     type="text"
                     required
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-lg font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none placeholder:text-slate-400 shadow-sm"
-                    placeholder="e.g. Chill Gamer 99"
+                    className="shroom-input"
+                    placeholder="Your display name"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoggingIn || !displayName.trim()}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex justify-center items-center gap-3 disabled:opacity-50"
+                  className="shroom-primary-button w-full"
                 >
                   {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Continue <ArrowRight className="w-5 h-5" /></>}
                 </button>
-              </motion.form>
+              </form>
             ) : (
-              <motion.div 
-                key="lobby"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-6"
+              <div 
+                className="shroom-entry-card shroom-lobby-card shroom-panel-enter"
               >
-                <div className="flex bg-slate-100 dark:bg-slate-950 p-1.5 rounded-2xl mb-8 border border-slate-200 dark:border-slate-800">
+                <div className={`shroom-mode-switch is-${mode}`} role="group" aria-label="Choose how to enter a room">
                   <button
+                    type="button"
                     onClick={() => setMode('start')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all ${mode === 'start' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                    aria-pressed={mode === 'start'}
+                    className={`shroom-mode-option ${mode === 'start' ? 'is-active' : ''}`}
                   >
-                    Start Room
+                    <span className="shroom-mode-label"><Video aria-hidden="true" size={14} strokeWidth={1.9} /> Start room</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => setMode('join')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all ${mode === 'join' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                    aria-pressed={mode === 'join'}
+                    className={`shroom-mode-option ${mode === 'join' ? 'is-active' : ''}`}
                   >
-                    Join with Link
+                    <span className="shroom-mode-label"><LinkIcon aria-hidden="true" size={14} strokeWidth={1.9} /> Join with link</span>
                   </button>
                 </div>
 
-                <AnimatePresence mode="wait">
                   {mode === 'start' ? (
-                    <motion.div 
-                      key="start"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
+                    <div className="shroom-panel-enter">
                       <button
                         onClick={handleCreateRoom}
                         disabled={isCreatingRoom}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 px-6 rounded-2xl shadow-xl shadow-blue-500/20 hover:-translate-y-0.5 active:translate-y-0 transition-all flex justify-center items-center gap-3 disabled:opacity-50"
+                        aria-label="Start Instant Call"
+                        className="shroom-primary-button shroom-action-button w-full"
                       >
-                        {isCreatingRoom ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Start Instant Call <Video className="w-5 h-5" /></>}
+                        {isCreatingRoom ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Video aria-hidden="true" className="shroom-action-icon" size={15} strokeWidth={1.9} /> Start room</>}
                       </button>
-                    </motion.div>
+                    </div>
                   ) : (
-                    <motion.form 
-                      key="join"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
+                    <form 
                       onSubmit={handleJoinExistingRoom}
-                      className="flex flex-col gap-3"
+                      className="shroom-join-form shroom-panel-enter"
                     >
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <LinkIcon className="h-5 w-5 text-slate-400" />
+                      <div className="shroom-room-field relative">
+                        <div className="shroom-room-field-icon absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <LinkIcon aria-hidden="true" className="h-4 w-4 text-white/35" strokeWidth={1.8} />
                         </div>
+                        <label htmlFor="room-code" className="sr-only">Room link or code</label>
                         <input
+                          id="room-code"
                           type="text"
                           required
+                          autoComplete="off"
+                          spellCheck={false}
                           value={joinCode}
                           onChange={(e) => setJoinCode(e.target.value.toLowerCase())}
-                          className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-lg font-bold font-mono focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none placeholder:text-slate-400 shadow-sm placeholder:font-sans placeholder:font-medium tracking-wide"
-                          placeholder="abc-defg-hij"
+                          className="shroom-input shroom-room-input"
+                          placeholder="Paste room link or code"
                         />
                       </div>
                       <button
                         type="submit"
                         disabled={isJoining || !joinCode.trim()}
-                        className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold py-4 px-6 rounded-2xl shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex justify-center items-center gap-3 disabled:opacity-50"
+                        aria-label="Join Call"
+                        className="shroom-primary-button shroom-action-button w-full"
                       >
-                        {isJoining ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Join Call <ArrowRight className="w-5 h-5" /></>}
+                        {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Join room <ArrowRight aria-hidden="true" className="shroom-action-arrow" size={15} strokeWidth={1.9} /></>}
                       </button>
-                    </motion.form>
+                    </form>
                   )}
-                </AnimatePresence>
 
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
+          </div>
 
           {displayError && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+            <div 
               id="error-toast" 
-              className="mt-6 p-4 bg-red-50/80 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-semibold rounded-2xl flex items-center gap-3 border border-red-100 dark:border-red-900/30 backdrop-blur-md"
+              className="shroom-error shroom-panel-enter mt-4"
             >
               <AlertCircle className="w-5 h-5 shrink-0" />
               <p>{displayError}</p>
-            </motion.div>
+            </div>
           )}
 
         </div>
-      </motion.div>
-    </div>
+
+        <div className="shroom-hero-wrap hidden justify-center lg:flex">
+          <div className="shroom-hero-card">
+            <div className="flex items-center justify-between text-xs text-white/45"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-shroom-primary" /> live room</span><Sparkles className="h-4 w-4 text-shroom-primary" /></div>
+            <div className="shroom-hero-screen"><div className="shroom-avatar">S</div><span className="mt-3 text-lg font-medium">You, in focus.</span><span className="mt-1 text-xs text-white/35">No tabs. No noise. Just the room.</span></div>
+            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.06] p-2"><div className="flex gap-2"><span className="shroom-mini-control">◉</span><span className="shroom-mini-control">◌</span><span className="shroom-mini-control">✦</span></div><span className="rounded-xl bg-shroom-primary px-4 py-2 text-xs font-bold text-white">ready</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

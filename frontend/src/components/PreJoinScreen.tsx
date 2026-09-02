@@ -13,7 +13,7 @@ interface Props {
   onCancel: () => void;
 }
 
-export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported = true, encryptionAvailable = false, onJoin, onCancel }: Props) {
+export function PreJoinScreen({ roomId, displayName, encrypted = false, encryptionSupported = true, encryptionAvailable = false, onJoin, onCancel }: Props) {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   
@@ -57,6 +57,8 @@ export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported =
   };
 
   useEffect(() => {
+    // Media capture synchronizes with browser devices and updates state only after those APIs resolve.
+    // oxlint-disable-next-line react/set-state-in-effect
     loadMedia('', '');
     return () => {
       if (streamRef.current) {
@@ -99,11 +101,11 @@ export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported =
   })();
 
   return (
-    <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="shroom-prejoin shroom-prejoin-shell min-h-[100dvh] font-sans">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-slate-900 rounded-[2rem] p-5 md:p-8 shadow-2xl border border-slate-800 relative z-10 flex flex-col items-center max-w-[95vw] sm:max-w-2xl"
+        className="shroom-prejoin-card relative z-10 flex w-full max-w-2xl flex-col items-center"
       >
         {inAppBrowserWarning && (
           <div className="w-full bg-amber-500/20 border border-amber-500/50 text-amber-400 p-3 rounded-xl mb-6 text-sm font-medium flex items-center justify-between">
@@ -111,52 +113,62 @@ export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported =
           </div>
         )}
 
-        <div className="flex items-center justify-between w-full mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md">
+        <div className="shroom-prejoin-header">
+          <div className="shroom-prejoin-meta">
+            <div className="shroom-mark shrink-0">
               <ShroomLogo className="w-5 h-5" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Ready to join?</h2>
+            <p className="shroom-prejoin-kicker">
+              <span className="shroom-prejoin-kicker-label">Private room</span>
+              <span aria-hidden="true">·</span>
+              <span className="shroom-prejoin-room-code" title={roomId}>{roomId}</span>
+            </p>
           </div>
           <button 
+            type="button"
             onClick={() => setShowSettings(!showSettings)}
             aria-label="Device settings"
             aria-expanded={showSettings}
-            className={`p-2 rounded-xl transition-colors ${showSettings ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+            className={`shroom-prejoin-settings-button ${showSettings ? 'is-active' : ''}`}
           >
-            <><Settings2 className="w-5 h-5" /> <span className="text-sm font-bold hidden sm:inline">Device Settings</span></>
+            <Settings2 aria-hidden="true" className="h-4 w-4" />
+            <span className="hidden sm:inline">Devices</span>
           </button>
+          <div className="shroom-prejoin-title-block">
+            <h1 className="shroom-prejoin-title">Ready when you are?</h1>
+            <p className="shroom-prejoin-identity">Joining as {displayName}</p>
+          </div>
         </div>
 
-        <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden relative shadow-inner mb-6">
+        <div className="shroom-preview w-full aspect-video rounded-2xl overflow-hidden relative mb-6">
           {stream && camEnabled ? (
             <video 
               ref={videoRef}
               autoPlay 
               playsInline 
               muted 
-              className="w-full h-full object-cover mirror"
+            className="w-full h-full object-cover mirror"
               style={{ transform: 'scaleX(-1)' }}
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-800 text-slate-500">
-              <VideoOff className="w-12 h-12 mb-3 opacity-50" />
-              <p className="font-medium text-sm">Camera is off</p>
+            <div className="shroom-camera-off h-full w-full bg-slate-800 text-slate-500">
+              <VideoOff className="shroom-camera-off-icon opacity-50" />
+              <p className="shroom-camera-off-label">Camera is off</p>
             </div>
           )}
           
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2.5 sm:bottom-4 sm:gap-3">
             <button
               onClick={() => setMicEnabled(!micEnabled)}
               aria-label={micEnabled ? 'Turn microphone off' : 'Turn microphone on'}
-              className={`p-4 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${micEnabled ? 'bg-slate-800/80 text-white backdrop-blur-md hover:bg-slate-700' : 'bg-red-500 text-white'}`}
+              className={`shroom-device-button ${micEnabled ? '' : 'is-off'}`}
             >
               {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
             </button>
             <button
               onClick={() => setCamEnabled(!camEnabled)}
               aria-label={camEnabled ? 'Turn camera off' : 'Turn camera on'}
-              className={`p-4 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${camEnabled ? 'bg-slate-800/80 text-white backdrop-blur-md hover:bg-slate-700' : 'bg-red-500 text-white'}`}
+              className={`shroom-device-button ${camEnabled ? '' : 'is-off'}`}
             >
               {camEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
             </button>
@@ -169,7 +181,7 @@ export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported =
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="w-full bg-slate-950 rounded-2xl p-4 mb-6 border border-slate-800 overflow-hidden"
+              className="shroom-settings w-full rounded-2xl p-4 mb-6 overflow-hidden"
             >
               <div className="flex flex-col gap-4">
                 <div>
@@ -178,7 +190,7 @@ export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported =
                     aria-label="Camera"
                     value={selectedVideo} 
                     onChange={handleVideoChange}
-                    className="w-full bg-slate-900 border border-slate-800 text-sm text-white rounded-xl p-3 outline-none focus:border-blue-500 transition-colors"
+                    className="shroom-input w-full text-sm"
                   >
                     {videoDevices.map(d => (
                       <option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${d.deviceId.slice(0,5)}`}</option>
@@ -191,7 +203,7 @@ export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported =
                     aria-label="Microphone"
                     value={selectedAudio} 
                     onChange={handleAudioChange}
-                    className="w-full bg-slate-900 border border-slate-800 text-sm text-white rounded-xl p-3 outline-none focus:border-blue-500 transition-colors"
+                    className="shroom-input w-full text-sm"
                   >
                     {audioDevices.map(d => (
                       <option key={d.deviceId} value={d.deviceId}>{d.label || `Mic ${d.deviceId.slice(0,5)}`}</option>
@@ -210,33 +222,38 @@ export function PreJoinScreen({ roomId, encrypted = false, encryptionSupported =
         )}
 
         {(encrypted || encryptionAvailable) && (
-          <div className="mb-5 w-full rounded-xl border border-emerald-700/50 bg-emerald-950/30 p-3 text-sm text-emerald-200">
+          <div className="shroom-encryption-panel">
             {encrypted && encryptionSupported ? (
-              <p><strong>End-to-end encrypted room.</strong> The media key came from the private part of your invite link.</p>
+              <p><strong>End-to-end encrypted.</strong> This room uses the private key in your invite link.</p>
             ) : encrypted ? (
-              <p role="alert"><strong>This encrypted room needs a compatible browser.</strong> Open the link in a current Chrome, Edge, or Firefox release.</p>
+              <p role="alert"><strong>Compatible browser required.</strong> Open this link in a current Chrome, Edge, or Firefox release.</p>
             ) : (
-              <label className="flex cursor-pointer items-start gap-3">
-                <input type="checkbox" checked={enableE2EE} onChange={event => setEnableE2EE(event.target.checked)} className="mt-1 h-5 w-5" />
-                <span><strong>Use end-to-end encryption</strong><br />Invitees need a compatible browser and the complete private link.</span>
+              <label className="shroom-encryption-option">
+                <input type="checkbox" checked={enableE2EE} onChange={event => setEnableE2EE(event.target.checked)} />
+                <span>
+                  <strong>End-to-end encryption</strong>
+                  <small>Requires compatible browsers and the complete private link.</small>
+                </span>
               </label>
             )}
           </div>
         )}
 
-        <div className="w-full flex gap-4">
+        <div className="shroom-prejoin-actions">
           <button
+            type="button"
             onClick={onCancel}
-            className="flex-1 py-4 rounded-2xl font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="shroom-quiet-button shroom-prejoin-action flex-1"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => onJoin(micEnabled, camEnabled, selectedVideo, selectedAudio, enableE2EE)}
             disabled={encrypted && !encryptionSupported}
-            className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
+            className="shroom-primary-button shroom-prejoin-action min-w-0 flex-[2]"
           >
-            Join <span className="truncate max-w-[100px] sm:max-w-[150px] inline-block align-bottom">{roomId}</span> <ArrowRight className="w-5 h-5" />
+            <span>Join room</span><ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
           </button>
         </div>
       </motion.div>

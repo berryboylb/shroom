@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDataChannel, useLocalParticipant } from '@livekit/components-react';
-import { Circle, Square } from 'lucide-react';
+import { Circle, Square, X } from 'lucide-react';
 
 const MAX_RECORDING_BYTES = 100 * 1024 * 1024;
 
@@ -8,10 +8,18 @@ export function LocalRecording({ roomId }: { roomId: string }) {
   const { localParticipant } = useLocalParticipant();
   const [recording, setRecording] = useState(false);
   const [notice, setNotice] = useState('');
+  const [noticePersistent, setNoticePersistent] = useState(false);
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
   const bytes = useRef(0);
+  const stopNotice = useRef('');
+
+  useEffect(() => {
+    if (!notice || noticePersistent) return;
+    const timer = window.setTimeout(() => setNotice(''), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [notice, noticePersistent]);
 
   const publishStatus = useCallback((active: boolean) => {
     const payload = new TextEncoder().encode(JSON.stringify({
@@ -26,6 +34,7 @@ export function LocalRecording({ roomId }: { roomId: string }) {
     try {
       const payload = JSON.parse(new TextDecoder().decode(message.payload));
       if (payload.type === 'recording-status') {
+        setNoticePersistent(Boolean(payload.active));
         setNotice(payload.active ? `${payload.participant || 'A participant'} started a local recording.` : 'Local recording stopped.');
       }
     } catch {
@@ -54,7 +63,7 @@ export function LocalRecording({ roomId }: { roomId: string }) {
         bytes.current += event.data.size;
         chunks.current.push(event.data);
         if (bytes.current >= MAX_RECORDING_BYTES) {
-          setNotice('Recording reached the 100 MB safety limit and was stopped.');
+          stopNotice.current = 'Recording reached the 100 MB safety limit and was stopped.';
           stop();
         }
       };
@@ -71,14 +80,19 @@ export function LocalRecording({ roomId }: { roomId: string }) {
         recorder.current = null;
         stream.current = null;
         setRecording(false);
+        setNoticePersistent(false);
+        setNotice(stopNotice.current || (blob.size ? 'Recording saved to this device.' : 'Recording stopped.'));
+        stopNotice.current = '';
         publishStatus(false);
       };
       capture.getVideoTracks()[0]?.addEventListener('ended', stop, { once: true });
       nextRecorder.start(1_000);
       setRecording(true);
+      setNoticePersistent(true);
       setNotice('You are recording locally. The file stays on this device.');
       publishStatus(true);
     } catch {
+      setNoticePersistent(false);
       setNotice('Recording was cancelled or screen capture permission was denied.');
     }
   };
@@ -94,13 +108,26 @@ export function LocalRecording({ roomId }: { roomId: string }) {
         disabled={!supported}
         aria-label={supported ? (recording ? 'Stop local recording' : 'Start local recording') : 'Local recording unsupported in this browser'}
         aria-pressed={recording}
-        className={`absolute right-28 top-20 z-40 min-h-11 min-w-11 rounded-full p-3 text-white shadow-lg disabled:opacity-40 ${recording ? 'bg-red-600' : 'bg-slate-900/90'}`}
+        title={supported ? (recording ? 'Stop recording' : 'Record locally') : 'Local recording is not supported by this browser'}
+        className={`shroom-call-tool shroom-call-tool-recording disabled:opacity-40 ${recording ? 'is-recording' : ''}`}
       >
         {recording ? <Square aria-hidden="true" className="h-5 w-5" /> : <Circle aria-hidden="true" className="h-5 w-5" />}
+        <span className="shroom-call-tool-label">{recording ? 'Stop' : 'Record'}</span>
       </button>
       {notice && (
-        <div role="status" aria-live="assertive" className="absolute left-1/2 top-32 z-50 -translate-x-1/2 rounded-xl bg-red-950/90 px-4 py-2 text-sm font-semibold text-white shadow-xl">
-          {notice}
+        <div role="status" aria-live="assertive" className="shroom-call-notice shroom-recording-notice">
+          <span>{notice}</span>
+          <button
+            type="button"
+            aria-label="Dismiss recording notice"
+            onClick={() => {
+              setNotice('');
+              setNoticePersistent(false);
+            }}
+            className="shroom-notice-close"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
         </div>
       )}
     </>

@@ -68,8 +68,8 @@ describe('room entry', () => {
     });
 
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Join with Link' }));
-    fireEvent.change(await screen.findByPlaceholderText('abc-defg-hij'), {
+    fireEvent.click(screen.getByRole('button', { name: 'Join with link' }));
+    fireEvent.change(await screen.findByPlaceholderText('Paste room link or code'), {
       target: { value: 'abc-defg-hij' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Join Call/i }));

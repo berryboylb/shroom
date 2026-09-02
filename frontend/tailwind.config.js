@@ -4,12 +4,19 @@ export default {
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
   theme: {
   	extend: {
+		fontFamily: {
+			sans: ['var(--font-body)'],
+			display: ['var(--font-display)'],
+		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
-  		colors: {
+        colors: {
+				'shroom-ink': '#080D1A',
+				'shroom-primary': '#2563EB',
+				'shroom-blue': '#263B70',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

@@ -1,25 +1,33 @@
-import { useMutation } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
 import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
 export function useAuth() {
   const setAccessToken = useAuthStore(state => state.setAccessToken);
   const setDisplayName = useAuthStore(state => state.setDisplayName);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<Error | null>(null);
 
-  const loginMutation = useMutation({
-    mutationFn: (displayName: string) => authApi.loginGuest(displayName).then(res => ({ ...res, displayName })),
-    onSuccess: (data) => {
-      setAccessToken(data.access_token);
-      setDisplayName(data.displayName);
-    },
-    onError: (error) => {
-      console.error('Login failed:', error.message);
-    },
-  });
+  const loginGuest = useCallback((displayName: string) => {
+    setIsLoggingIn(true);
+    setLoginError(null);
+
+    void authApi.loginGuest(displayName)
+      .then((session) => {
+        setAccessToken(session.access_token);
+        setDisplayName(session.display_name);
+      })
+      .catch((error: unknown) => {
+        const normalizedError = error instanceof Error ? error : new Error('Unable to sign in');
+        setLoginError(normalizedError);
+        console.error('Login failed:', normalizedError.message);
+      })
+      .finally(() => setIsLoggingIn(false));
+  }, [setAccessToken, setDisplayName]);
 
   return {
-    loginGuest: loginMutation.mutate,
-    isLoggingIn: loginMutation.isPending,
-    loginError: loginMutation.error,
+    loginGuest,
+    isLoggingIn,
+    loginError,
   };
 }

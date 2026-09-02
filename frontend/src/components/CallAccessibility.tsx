@@ -162,7 +162,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
         aria-label="Toggle participant list (P)"
         aria-expanded={showParticipants}
         onClick={() => setShowParticipants(value => !value)}
-        className="absolute right-4 top-20 z-40 min-h-11 min-w-11 rounded-full bg-slate-900/90 p-3 text-white shadow-lg"
+        className="shroom-call-tool shroom-call-tool-participants"
       >
         <Users aria-hidden="true" className="h-5 w-5" />
       </button>
@@ -171,7 +171,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
         aria-label={isHandRaised ? `Lower hand, position ${localHandPosition + 1}` : 'Raise hand (R)'}
         aria-pressed={isHandRaised}
         onClick={toggleHand}
-        className={`absolute right-16 top-20 z-40 min-h-11 min-w-11 rounded-full p-3 text-white shadow-lg ${isHandRaised ? 'bg-amber-500 hover:bg-amber-400' : 'bg-slate-900/90 hover:bg-slate-800'}`}
+        className={`shroom-call-tool shroom-call-tool-hand ${isHandRaised ? 'is-raised' : ''}`}
       >
         <Hand aria-hidden="true" className="h-5 w-5" />
         {isHandRaised && (
@@ -183,15 +183,15 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
       {showParticipants && (
         <aside
           aria-label="Participants"
-          className="absolute right-4 top-32 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-700 bg-slate-900 p-4 text-white shadow-2xl"
+          className="shroom-participant-panel"
         >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-bold">Participants ({participants.length})</h2>
+            <h2 className="text-base font-semibold">Participants <span className="text-white/45">({participants.length})</span></h2>
             <button
               type="button"
               aria-label="Close participant list"
               onClick={() => setShowParticipants(false)}
-              className="min-h-11 min-w-11 rounded-full p-3 hover:bg-slate-800"
+              className="shroom-panel-close"
             >
               <X aria-hidden="true" className="h-5 w-5" />
             </button>

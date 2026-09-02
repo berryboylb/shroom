@@ -2,31 +2,97 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#0f172a" />
-    
-    <!-- Primary Meta Tags -->
-    <title>Shroom | Frictionless Video Calling</title>
-    <meta name="title" content="Shroom | Frictionless Video Calling" />
-    <meta name="description" content="Jump in. No friction. Shroom is a beautiful, hyper-fast, ephemeral video calling platform designed for humans, not corporate meetings." />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1020" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="application-name" content="Shroom" />
+    <meta name="apple-mobile-web-app-title" content="Shroom" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-    <!-- Open Graph / Facebook -->
+    <title>Shroom — Instant Video Calls in Your Browser</title>
+    <meta name="description" content="Start or join browser-based video calls with Shroom. No downloads or complicated setup—share a room link, check your devices, and meet." />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://shroom.call/" />
+    <link rel="sitemap" type="application/xml" href="https://shroom.call/sitemap.xml" />
+    <link rel="alternate" type="text/plain" title="Shroom information for AI agents" href="https://shroom.call/llms.txt" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Shroom" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://shroom.call/" />
-    <meta property="og:title" content="Shroom | Frictionless Video Calling" />
-    <meta property="og:description" content="Jump in. No friction. Shroom is a beautiful, hyper-fast, ephemeral video calling platform designed for humans, not corporate meetings." />
-    <!-- <meta property="og:image" content="/og-image.jpg" /> -->
+    <meta property="og:title" content="Shroom — Instant Video Calls in Your Browser" />
+    <meta property="og:description" content="Start or join a video call from any browser. No downloads, no complicated setup." />
+    <meta property="og:image" content="https://shroom.call/og-image.png" />
+    <meta property="og:image:secure_url" content="https://shroom.call/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Shroom — meet without the friction" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://shroom.call/" />
-    <meta property="twitter:title" content="Shroom | Frictionless Video Calling" />
-    <meta property="twitter:description" content="Jump in. No friction. Shroom is a beautiful, hyper-fast, ephemeral video calling platform designed for humans, not corporate meetings." />
-    <!-- <meta property="twitter:image" content="/og-image.jpg" /> -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Shroom — Instant Video Calls in Your Browser" />
+    <meta name="twitter:description" content="Start or join a video call from any browser. No downloads, no complicated setup." />
+    <meta name="twitter:image" content="https://shroom.call/og-image.png" />
+    <meta name="twitter:image:alt" content="Shroom — meet without the friction" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://shroom.call/#organization",
+            "name": "Shroom",
+            "url": "https://shroom.call/",
+            "logo": { "@type": "ImageObject", "url": "https://shroom.call/icon-512.png", "width": 512, "height": 512 }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://shroom.call/#website",
+            "url": "https://shroom.call/",
+            "name": "Shroom",
+            "alternateName": "Shroom Call",
+            "description": "Browser-based video calls without downloads or complicated setup.",
+            "inLanguage": "en",
+            "publisher": { "@id": "https://shroom.call/#organization" }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://shroom.call/#webpage",
+            "url": "https://shroom.call/",
+            "name": "Shroom — Instant Video Calls in Your Browser",
+            "description": "Start or join browser-based video calls with Shroom.",
+            "isPartOf": { "@id": "https://shroom.call/#website" },
+            "about": { "@id": "https://shroom.call/#application" },
+            "inLanguage": "en"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://shroom.call/#application",
+            "name": "Shroom",
+            "url": "https://shroom.call/",
+            "description": "A browser-based video calling application with device preview and shareable room links.",
+            "applicationCategory": "CommunicationApplication",
+            "applicationSubCategory": "Video conferencing",
+            "operatingSystem": "Any",
+            "browserRequirements": "Requires a modern browser with WebRTC support.",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "publisher": { "@id": "https://shroom.call/#organization" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>Shroom requires JavaScript to start or join a browser-based video call.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -62,7 +62,7 @@ export function EmojiReactions() {
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center">
+      <div className="shroom-reaction-dock">
         <AnimatePresence mode="wait">
           {!isExpanded ? (
             <motion.button
@@ -72,7 +72,7 @@ export function EmojiReactions() {
               onClick={() => setIsExpanded(true)}
               aria-label="Open reactions"
               aria-expanded={isExpanded}
-              className="bg-slate-900/80 backdrop-blur-xl p-3 rounded-full border border-slate-700/50 shadow-2xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              className="shroom-call-tool-button"
             >
               <SmilePlus className="w-6 h-6" />
             </motion.button>
@@ -81,7 +81,7 @@ export function EmojiReactions() {
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
-              className="flex items-center gap-1 sm:gap-2 max-w-[95vw] overflow-x-auto bg-slate-900/80 backdrop-blur-xl p-2 rounded-full border border-slate-700/50 shadow-2xl pr-4"
+              className="shroom-reaction-menu"
             >
               {EMOJIS.map(emoji => (
                 <button

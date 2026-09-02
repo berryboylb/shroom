@@ -1,0 +1,29 @@
+# Shroom
+
+> Shroom is a browser-based video calling application for starting or joining focused meetings without downloading an app.
+
+Shroom runs at https://shroom.call/. A visitor can choose a display name, start a new room, or join an existing room from a shared link or room code. Shared links always stop at a pre-join device screen before microphone or camera access is enabled. Refreshes and temporary network reconnects can resume an active room without repeating pre-join.
+
+## Product
+
+- [Shroom home](https://shroom.call/): Start a room or join from a link.
+- [Sitemap](https://shroom.call/sitemap.xml): Canonical public URLs.
+
+## Capabilities
+
+- Browser-based video and audio calls using WebRTC.
+- Shareable room links and room codes.
+- Microphone, camera, and device confirmation before first entry.
+- Optional end-to-end media encryption when supported by the browser and room.
+- Network reconnection, device recovery, captions, reactions, hand raising, and local recording controls.
+
+## Important behavior
+
+- A newly opened room link does not bypass the pre-join privacy screen.
+- An already active room may reconnect after a refresh or temporary network failure.
+- Room URLs and the administration interface are private application routes and are not intended for search indexing.
+
+## Contact and attribution
+
+- Product name: Shroom
+- Canonical URL: https://shroom.call/

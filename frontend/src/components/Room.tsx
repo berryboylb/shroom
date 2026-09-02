@@ -14,9 +14,10 @@ import { ReconnectingOverlay } from './ReconnectingOverlay';
 import { DeviceRecovery } from './DeviceRecovery';
 import { LiveCaptions } from './LiveCaptions';
 import { LocalRecording } from './LocalRecording';
+import { VoiceNotes } from './VoiceNotes';
 import { ExternalE2EEKeyProvider, VideoPresets, type RoomOptions } from 'livekit-client';
 import E2EEWorker from 'livekit-client/e2ee-worker?worker';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface RoomProps {
   roomId: string;
@@ -28,6 +29,19 @@ interface RoomProps {
 
 export function Room({ roomId, token, serverUrl, e2eeKey, onDisconnected }: RoomProps) {
   const [e2ee, setE2EE] = useState<RoomOptions['e2ee']>();
+  const [chromeIdle, setChromeIdle] = useState(false);
+  const chromeTimer = useRef<number | undefined>(undefined);
+
+  const wakeChrome = useCallback(() => {
+    setChromeIdle(false);
+    window.clearTimeout(chromeTimer.current);
+    chromeTimer.current = window.setTimeout(() => setChromeIdle(true), 4_000);
+  }, []);
+
+  useEffect(() => {
+    chromeTimer.current = window.setTimeout(() => setChromeIdle(true), 4_000);
+    return () => window.clearTimeout(chromeTimer.current);
+  }, []);
 
   useEffect(() => {
     if (!e2eeKey) return;
@@ -54,7 +68,12 @@ export function Room({ roomId, token, serverUrl, e2eeKey, onDisconnected }: Room
   }
 
   return (
-    <div className="relative h-[100dvh] w-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
+    <div
+      className={`shroom-room relative h-[100dvh] w-full overflow-hidden font-sans ${chromeIdle ? 'is-chrome-idle' : ''}`}
+      onPointerMove={wakeChrome}
+      onPointerDown={wakeChrome}
+      onKeyDown={wakeChrome}
+    >
       <LiveKitRoom
         video={initialVideo}
         audio={initialAudio}
@@ -98,6 +117,7 @@ export function Room({ roomId, token, serverUrl, e2eeKey, onDisconnected }: Room
         <DeviceRecovery />
         <LiveCaptions />
         <LocalRecording roomId={roomId} />
+        <VoiceNotes />
         
         <div className="flex-1 p-0 sm:p-4 sm:pb-0 h-full">
           <VideoConference />

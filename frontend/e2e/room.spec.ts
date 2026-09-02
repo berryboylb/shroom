@@ -7,14 +7,14 @@ test.describe('Phase 4: WebRTC Media & Room Flow', () => {
 
     await page.goto('/');
 
-    await expect(page.locator('h1')).toContainText('Shroom');
-    await page.getByPlaceholder('e.g. Chill Gamer 99').fill('Playwright Tester');
+    await expect(page.locator('h1')).toContainText('Meet without');
+    await page.getByPlaceholder('Your display name').fill('Playwright Tester');
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await expect(page.getByRole('button', { name: /Start Instant Call/i })).toBeVisible();
     await page.getByRole('button', { name: /Start Instant Call/i }).click();
 
-    await expect(page.getByRole('heading', { name: 'Ready to join?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ready when you are?' })).toBeVisible();
     await page.getByRole('button', { name: /^Join / }).click();
 
     const videoElement = page.locator('video').first();
@@ -28,17 +28,17 @@ test.describe('Phase 4: WebRTC Media & Room Flow', () => {
       body: JSON.stringify({ room_id: 'abc-defg-hij', livekit_token: 'test-token' }),
     }));
     await page.goto('/abc-defg-hij');
-    await page.getByPlaceholder('e.g. Chill Gamer 99').fill('Privacy Tester');
+    await page.getByPlaceholder('Your display name').fill('Privacy Tester');
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Ready to join?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ready when you are?' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Turn microphone off' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Turn camera off' })).toBeVisible();
   });
 
   test('A network outage reconnects without returning to pre-join', async ({ page, context }) => {
     await page.goto('/');
-    await page.getByPlaceholder('e.g. Chill Gamer 99').fill('Recovery Tester');
+    await page.getByPlaceholder('Your display name').fill('Recovery Tester');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: /Start Instant Call/i }).click();
     await page.getByRole('button', { name: /^Join / }).click();
@@ -46,7 +46,7 @@ test.describe('Phase 4: WebRTC Media & Room Flow', () => {
 
     await context.setOffline(true);
     await expect(page.getByRole('alert')).toContainText('Reconnecting', { timeout: 20_000 });
-    await expect(page.getByRole('heading', { name: 'Ready to join?' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ready when you are?' })).not.toBeVisible();
 
     await context.setOffline(false);
     await expect(page.getByRole('alert')).not.toBeVisible({ timeout: 20_000 });

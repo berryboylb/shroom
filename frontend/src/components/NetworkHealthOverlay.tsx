@@ -130,13 +130,13 @@ export function NetworkHealthOverlay({ roomId }: { roomId: string }) {
     <div
       role="status"
       aria-live={isAudioOnly ? 'assertive' : 'polite'}
-      className="absolute top-20 sm:top-4 left-1/2 -translate-x-1/2 z-50 bg-amber-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2"
+      className="shroom-network-notice"
       title={metrics ? `RTT ${Math.round(metrics.rttMs)} ms · loss ${metrics.packetLossPercent.toFixed(1)}%` : undefined}
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
       </svg>
-      <span className="font-semibold text-sm">{message}</span>
+      <span>{message}</span>
     </div>
   );
 }

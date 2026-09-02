@@ -34,7 +34,7 @@ test.describe('Phase 8: Unhappy Paths & Resilience', () => {
   test('A cleared access token is restored from the secure refresh session', async ({ page }) => {
     await page.goto('/');
     
-    await page.getByPlaceholder('e.g. Chill Gamer 99').fill('Auth Tester');
+    await page.getByPlaceholder('Your display name').fill('Auth Tester');
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('button', { name: /Start Instant Call/i })).toBeVisible();
 
@@ -50,7 +50,7 @@ test.describe('Phase 8: Unhappy Paths & Resilience', () => {
 
   test('Explicit logout clears the refresh session', async ({ page }) => {
     await page.goto('/');
-    await page.getByPlaceholder('e.g. Chill Gamer 99').fill('Logout Tester');
+    await page.getByPlaceholder('Your display name').fill('Logout Tester');
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('button', { name: /Start Instant Call/i })).toBeVisible();
 

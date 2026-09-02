@@ -2,6 +2,292 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Manrope Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+:root {
+  color-scheme: dark;
+  --font-display: Poppins, sans-serif;
+  --font-body: "Manrope Variable", Manrope, sans-serif;
+  --shroom-ink: #080d1a;
+  --shroom-night: #101a32;
+  --shroom-panel: rgba(255, 255, 255, .065);
+  --shroom-primary: #2563eb;
+  --shroom-primary-hover: #1d4ed8;
+  --shroom-muted: #9aa8c2;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: var(--shroom-ink); font-family: var(--font-body); font-optical-sizing: auto; font-synthesis: none; text-rendering: optimizeLegibility; }
+h1, h2, h3, h4, h5, h6, button { font-family: var(--font-display); }
+input, select, textarea { font-family: var(--font-body); }
+
+.shroom-home { position: relative; isolation: isolate; background: linear-gradient(145deg, #0b1020 0%, #15213c 58%, #0a0f1d 100%); }
+.shroom-noise { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .11; background-image: radial-gradient(rgba(255,255,255,.11) 1px, transparent 1px); background-size: 29px 29px; mask-image: linear-gradient(to bottom, black, transparent 82%); }
+.shroom-mark { display: grid; width: 1.8rem; height: 1.8rem; place-items: center; color: white; background: var(--shroom-primary); border-radius: .55rem; }
+.shroom-wordmark { font-family: var(--font-display); font-weight: 700; letter-spacing: -.04em; }
+.shroom-home-title { font-weight: 600; letter-spacing: -.045em; }
+.shroom-home-copy { font-family: var(--font-body); line-height: 1.65; font-weight: 450; letter-spacing: -.01em; }
+.shroom-icon-button { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; color: rgba(255,255,255,.7); background: rgba(255,255,255,.05); cursor: pointer; transition: .2s ease; }
+.shroom-icon-button:hover { color: white; border-color: rgba(37,99,235,.65); background: rgba(37,99,235,.16); }
+.shroom-eyebrow { display: block; margin-bottom: .65rem; color: rgba(255,255,255,.55); font-family: var(--font-body); font-size: .78rem; font-weight: 600; letter-spacing: -.005em; }
+.shroom-entry-card { width: 100%; box-sizing: border-box; padding: .7rem; border: 1px solid rgba(255,255,255,.1); border-radius: 1.1rem; background: rgba(8,13,26,.34); box-shadow: 0 18px 50px rgba(0,0,0,.16); backdrop-filter: blur(14px); }
+.shroom-entry-card form, .shroom-entry-card > div { width: 100%; box-sizing: border-box; }
+.shroom-entry-card .shroom-input { width: 100%; box-sizing: border-box; }
+.shroom-input { border: 1px solid rgba(255,255,255,.13); border-radius: .85rem; padding: .9rem 1rem; color: white; background: rgba(255,255,255,.055); outline: none; font-weight: 500; letter-spacing: -.012em; transition: border-color .2s, box-shadow .2s, background .2s; }
+.shroom-input:focus { border-color: var(--shroom-primary); background: rgba(255,255,255,.08); box-shadow: 0 0 0 3px rgba(37,99,235,.16); }
+.shroom-input.pl-11 { padding-left: 2.75rem; }
+.shroom-room-input { height: 2.75rem; padding: 0 .875rem 0 2.5rem; font-family: var(--font-body); font-size: .8125rem; font-weight: 500; letter-spacing: -.005em; }
+.shroom-input::placeholder { color: rgba(255,255,255,.3); font-weight: 400; }
+.shroom-primary-button, .shroom-secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; min-height: 3.3rem; border: 0; border-radius: .85rem; padding: .85rem 1rem; font-weight: 600; letter-spacing: -.012em; cursor: pointer; transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, background-color .18s ease, border-color .18s ease; }
+.shroom-primary-button { color: white; background: var(--shroom-primary); box-shadow: none; }
+.shroom-primary-button:hover { background: var(--shroom-primary-hover); transform: translateY(-1px); box-shadow: none; }
+.shroom-primary-button:active, .shroom-secondary-button:active { transform: translateY(0) scale(.985); }
+.shroom-primary-button:focus-visible, .shroom-secondary-button:focus-visible, .shroom-input:focus-visible { outline: 2px solid #8bb1ff; outline-offset: 3px; }
+.shroom-secondary-button { color: white; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.08); }
+.shroom-secondary-button:hover { background: rgba(255,255,255,.13); transform: translateY(-2px); }
+.shroom-primary-button:disabled, .shroom-secondary-button:disabled { cursor: not-allowed; opacity: .45; transform: none; }
+.shroom-lobby-card { display: grid; gap: .625rem; }
+.shroom-join-form { display: grid; gap: .5rem; }
+.shroom-action-button { height: 2.75rem; min-height: 2.75rem; border-radius: .75rem; padding: 0 .875rem; font-size: .8125rem; line-height: 1; }
+.shroom-mode-switch { position: relative; isolation: isolate; display: grid; height: 2.875rem; min-height: 2.875rem; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; padding: 0; border: 1px solid rgba(255,255,255,.09); border-radius: .75rem; background: rgba(8,13,26,.48); overflow: hidden; }
+.shroom-mode-switch::before { position: absolute; top: .1875rem; bottom: .1875rem; left: .1875rem; z-index: 0; width: calc(50% - .1875rem); border: 1px solid rgba(255,255,255,.1); border-radius: .55rem; background: rgba(255,255,255,.09); content: ""; transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+.shroom-mode-switch.is-join::before { transform: translateX(100%); }
+.shroom-mode-option { position: relative; z-index: 1; display: flex; min-width: 0; min-height: 2.75rem; align-items: center; justify-content: center; border: 0; border-radius: .65rem; padding: 0 .625rem; color: rgba(255,255,255,.46); background: transparent; font-size: .75rem; line-height: 1; font-weight: 600; letter-spacing: -.012em; cursor: pointer; transition: color .18s ease; }
+.shroom-mode-option:hover { color: rgba(255,255,255,.78); }
+.shroom-mode-option.is-active { color: white; }
+.shroom-mode-option:focus-visible { outline: 2px solid #78a4ff; outline-offset: 2px; }
+.shroom-mode-label { display: inline-flex; min-width: 0; align-items: center; justify-content: center; gap: .45rem; white-space: nowrap; }
+.shroom-mode-label, .shroom-action-icon, .shroom-action-arrow, .shroom-room-field-icon { transition: transform .18s cubic-bezier(.2,.8,.2,1), color .18s ease; }
+.shroom-mode-option:active .shroom-mode-label { transform: scale(.98); }
+.shroom-primary-button:hover .shroom-action-icon { transform: scale(1.08); }
+.shroom-primary-button:hover .shroom-action-arrow { transform: translateX(2px); }
+.shroom-room-field:focus-within .shroom-room-field-icon { color: #8bb1ff; transform: translateX(1px); }
+.shroom-room-field:focus-within .shroom-room-field-icon svg { color: currentColor; }
+.shroom-panel-enter { animation: shroom-panel-in .2s cubic-bezier(.2,.8,.2,1) both; }
+.shroom-hero-wrap { transform: rotate(-3deg); transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+.shroom-hero-wrap:hover { transform: translateY(-4px) rotate(-2.25deg); }
+
+@keyframes shroom-panel-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 420px) {
+  .shroom-home { padding-left: 1rem; padding-right: 1rem; }
+  .shroom-home section { gap: 2rem; padding-top: 2.5rem; padding-bottom: 2.5rem; }
+  .shroom-home h1 { font-size: 2.85rem; }
+  .shroom-home .shroom-entry-card { padding: .8rem; border-radius: 1rem; }
+  .shroom-home .shroom-entry-card .shroom-input { padding-top: 0; padding-bottom: 0; }
+  .shroom-home .shroom-entry-card .shroom-secondary-button,
+  .shroom-home .shroom-entry-card .shroom-primary-button { min-height: 2.65rem; padding-top: .55rem; padding-bottom: .55rem; }
+  .shroom-home .shroom-action-button { height: 2.75rem; min-height: 2.75rem; padding: 0 .875rem; }
+  .shroom-mode-option { padding-left: .5rem; padding-right: .5rem; font-size: .75rem; }
+}
+@media (min-width: 421px) and (max-width: 767px) {
+  .shroom-home .shroom-home-title { font-size: 3.15rem; }
+}
+@media (max-width: 767px) {
+  .shroom-home section { align-items: start; min-height: 0; padding-top: 4.5rem; }
+  .shroom-entry-shell { margin-top: 2rem; }
+  .shroom-home .shroom-lobby-card { gap: .5rem; }
+}
+@media (max-width: 1023px) {
+  .shroom-home-content { width: min(100%, 36rem); margin-right: auto; margin-left: auto; }
+  .shroom-home .shroom-entry-card { padding: 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .shroom-home > header { width: min(100%, 36rem); }
+  .shroom-home section { min-height: 0; align-items: start; padding-top: 3.5rem; padding-bottom: 4rem; }
+  .shroom-home .shroom-home-title { max-width: 11ch; font-size: 3.5rem; }
+  .shroom-entry-shell { margin-top: 2.25rem; }
+  .shroom-join-form { grid-template-columns: minmax(0, 1fr) 8rem; }
+  .shroom-join-form .shroom-action-button { width: 8rem; }
+}
+.shroom-error { display: flex; align-items: center; gap: .7rem; border: 1px solid rgba(255,117,117,.22); border-radius: .85rem; padding: .8rem 1rem; color: #ffb6b6; background: rgba(255,80,80,.08); }
+.shroom-hero-card { display: flex; width: min(100%, 380px); min-height: 500px; flex-direction: column; justify-content: space-between; padding: 1.15rem; border: 1px solid rgba(255,255,255,.13); border-radius: 2.2rem; background: linear-gradient(165deg, rgba(31,47,82,.9), rgba(8,13,26,.98) 70%); box-shadow: 0 44px 96px rgba(0,0,0,.5); }
+.shroom-hero-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; }
+.shroom-avatar { display: grid; width: 9rem; height: 9rem; place-items: center; border: 5px solid rgba(37,99,235,.24); border-radius: 999px; color: white; background: linear-gradient(145deg, #315fc0, #1d3f82); font-size: 4rem; font-weight: 500; box-shadow: none; }
+.shroom-mini-control { display: grid; width: 2.3rem; height: 2.3rem; place-items: center; border-radius: .7rem; color: rgba(255,255,255,.75); background: rgba(255,255,255,.1); }
+.shroom-prejoin { background: linear-gradient(145deg, #0b1020, #15213c 58%, #0a0f1d); }
+.shroom-prejoin-shell { position: relative; display: flex; align-items: flex-start; justify-content: center; overflow-x: hidden; overflow-y: auto; padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)); }
+.shroom-prejoin-card { margin: auto; padding: 1rem; border: 1px solid rgba(255,255,255,.12); border-radius: 1.25rem; background: rgba(16,26,50,.82); box-shadow: 0 28px 80px rgba(0,0,0,.38); backdrop-filter: blur(24px); }
+.shroom-prejoin-header { display: grid; width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: .75rem; margin-bottom: 1rem; }
+.shroom-prejoin-meta { display: flex; min-width: 0; align-items: center; gap: .65rem; }
+.shroom-prejoin-kicker { display: flex; min-width: 0; align-items: center; gap: .25rem; overflow: hidden; margin: 0; color: rgba(255,255,255,.46); font-size: .6875rem; font-weight: 650; line-height: 1.3; white-space: nowrap; }
+.shroom-prejoin-kicker-label { flex: 0 0 auto; }
+.shroom-prejoin-room-code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shroom-prejoin-title-block { grid-column: 1 / -1; min-width: 0; margin-top: .75rem; }
+.shroom-prejoin-title { margin: 0; color: white; font-size: 1.25rem; font-weight: 600; line-height: 1.2; letter-spacing: -.025em; }
+.shroom-prejoin-identity { margin: .3rem 0 0; color: rgba(255,255,255,.46); font-size: .75rem; line-height: 1.4; }
+.shroom-prejoin-settings-button { display: inline-flex; width: 2.75rem; height: 2.75rem; flex: 0 0 auto; align-items: center; justify-content: center; gap: .45rem; border: 1px solid rgba(255,255,255,.11); border-radius: .75rem; color: rgba(255,255,255,.65); background: rgba(255,255,255,.05); font-size: .75rem; font-weight: 600; cursor: pointer; transition: color .18s ease, border-color .18s ease, background-color .18s ease, transform .18s ease; }
+.shroom-prejoin-settings-button:hover, .shroom-prejoin-settings-button.is-active { color: white; border-color: rgba(37,99,235,.65); background: rgba(37,99,235,.18); }
+.shroom-prejoin-settings-button:active { transform: scale(.98); }
+.shroom-preview { margin-bottom: 1rem; border: 1px solid rgba(255,255,255,.1); border-radius: 1rem; background: linear-gradient(145deg, #1f315e, #080d1a); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 44px rgba(0,0,0,.18); }
+.shroom-camera-off { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 3rem; }
+.shroom-camera-off-icon { width: 3rem; height: 3rem; margin-bottom: .75rem; }
+.shroom-camera-off-label { margin: 0; font-size: .875rem; font-weight: 500; line-height: 1.25; }
+.shroom-settings { border: 1px solid rgba(255,255,255,.1); background: rgba(8,13,26,.65); }
+.shroom-encryption-panel { width: 100%; margin-bottom: .875rem; padding: .75rem; border: 1px solid rgba(16,185,129,.35); border-radius: .85rem; color: #a7f3d0; background: rgba(6,78,59,.2); font-size: .75rem; font-weight: 500; line-height: 1.5; }
+.shroom-encryption-panel p { margin: 0; }
+.shroom-encryption-option { display: flex; cursor: pointer; align-items: flex-start; gap: .65rem; }
+.shroom-encryption-option input { width: 1rem; height: 1rem; flex: 0 0 auto; margin: .12rem 0 0; accent-color: var(--shroom-primary); }
+.shroom-encryption-option span { display: grid; min-width: 0; gap: .15rem; }
+.shroom-encryption-option strong { color: #d1fae5; font-family: var(--font-display); font-size: .8125rem; font-weight: 600; line-height: 1.35; }
+.shroom-encryption-option small { color: rgba(167,243,208,.72); font-size: .6875rem; line-height: 1.45; }
+.shroom-device-button { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 999px; color: white; background: rgba(8,13,26,.75); backdrop-filter: blur(12px); cursor: pointer; transition: transform .18s ease, border-color .18s ease, background-color .18s ease; }
+.shroom-device-button:hover { border-color: var(--shroom-primary); transform: translateY(-1px); }
+.shroom-device-button.is-off { color: white; border-color: rgba(255,100,100,.55); background: #c94b59; }
+.shroom-quiet-button { border: 0; color: rgba(255,255,255,.48); background: transparent; cursor: pointer; transition: .2s ease; }
+.shroom-quiet-button:hover { color: white; background: rgba(255,255,255,.06); }
+.shroom-prejoin-actions { display: flex; width: 100%; gap: .5rem; }
+.shroom-prejoin-action { height: 2.875rem; min-height: 2.875rem; border-radius: .75rem; padding: 0 .875rem; font-size: .8125rem; line-height: 1; }
+
+@media (max-width: 360px) {
+  .shroom-camera-off { justify-content: flex-start; padding: 1.125rem 1rem 4rem; }
+  .shroom-camera-off-icon { width: 2rem; height: 2rem; margin-bottom: .4rem; }
+  .shroom-camera-off-label { font-size: .75rem; }
+}
+
+@media (min-width: 640px) {
+  .shroom-prejoin-shell { padding: 1.5rem; }
+  .shroom-prejoin-card { padding: 1.5rem; border-radius: 1.5rem; }
+  .shroom-prejoin-header { margin-bottom: 1.25rem; }
+  .shroom-prejoin-title-block { margin-top: .9rem; }
+  .shroom-prejoin-title { font-size: 1.5rem; }
+  .shroom-prejoin-settings-button { width: auto; padding: 0 .8rem; }
+  .shroom-preview { margin-bottom: 1.25rem; border-radius: 1.25rem; }
+  .shroom-prejoin-actions { gap: .75rem; }
+  .shroom-encryption-panel { margin-bottom: 1.25rem; padding: .875rem; font-size: .8125rem; }
+  .shroom-encryption-option strong { font-size: .875rem; }
+  .shroom-encryption-option small { font-size: .75rem; }
+}
+
+@media (min-width: 768px) {
+  .shroom-prejoin-card { padding: 2rem; border-radius: 1.75rem; }
+}
+
+/* Calm stage around LiveKit's media primitives. */
+.shroom-room { background: linear-gradient(145deg, #080d1a 0%, #101a32 55%, #0b1428 100%); }
+.shroom-room [data-lk-theme="default"] { --lk-bg: #0a1122; --lk-bg2: #111d36; --lk-bg3: #172746; --lk-bg4: #1d3158; --lk-bg5: #25406f; --lk-fg: #f8fafc; --lk-fg2: #e8eef9; --lk-fg3: #cdd8eb; --lk-fg4: #a9b8d2; --lk-fg5: #8294b4; --lk-border-color: rgba(117,151,211,.2); --lk-accent-bg: #2563eb; --lk-accent2: #3474ef; --lk-accent3: #4b83f1; --lk-accent4: #6b99f3; --lk-control-bg: #15213c; --lk-control-hover-bg: #1c2e52; --lk-control-active-bg: #244b91; --lk-control-active-hover-bg: #2b5caf; --lk-font-family: var(--font-body); --lk-border-radius: .9rem; }
+.shroom-room .lk-video-conference { --lk-control-bar-bg: rgba(12,22,43,.9); --lk-border-radius: 1.25rem; background: linear-gradient(155deg, rgba(18,32,61,.96), rgba(8,15,31,.98)); }
+.shroom-room .lk-participant-tile { border: 1px solid rgba(91,132,207,.24); border-radius: 1.25rem !important; background: #0e1930; box-shadow: 0 20px 50px rgba(0,0,0,.22); }
+.shroom-room .lk-participant-placeholder { background: radial-gradient(circle at 50% 38%, #1a2b4d 0%, #101c34 58%, #0b1427 100%) !important; }
+.shroom-room .lk-participant-placeholder svg { color: #7891bd; opacity: .48; }
+.shroom-room .lk-participant-metadata-item { padding: .35rem .5rem; border: 1px solid rgba(121,151,205,.16); border-radius: .65rem; background: rgba(8,15,31,.82); backdrop-filter: blur(12px); }
+.shroom-room .lk-control-bar { border: 1px solid rgba(91,132,207,.24); background: rgba(12,22,43,.92); box-shadow: 0 20px 60px rgba(0,0,0,.34); backdrop-filter: blur(20px); }
+.shroom-room .lk-chat { overflow: hidden; border: 1px solid rgba(91,132,207,.24); border-radius: 1.25rem; background: #111d36; box-shadow: 0 18px 48px rgba(0,0,0,.2); }
+.shroom-room .lk-chat-header { padding: .75rem 3.75rem .75rem 1rem; justify-content: flex-start; border-bottom: 1px solid rgba(91,132,207,.2); color: #f8fafc; font-family: var(--font-display); font-weight: 600; }
+.shroom-room .lk-chat-header .lk-close-button { right: .75rem; width: 2.75rem; height: 2.75rem; padding: .65rem !important; transform: none; }
+.shroom-room .lk-chat-form { overflow: hidden; border-color: rgba(91,132,207,.2); border-radius: 0 0 1.2rem 1.2rem; background: rgba(12,22,43,.96); }
+.shroom-room [data-lk-theme] .lk-chat-form-input { min-width: 0; border: 1px solid rgba(91,132,207,.34); color: #f8fafc; background: #111d36; outline: none; }
+.shroom-room [data-lk-theme] .lk-chat-form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(37,99,235,.16); }
+.shroom-room .lk-chat-form-button { color: white; background: #2563eb; }
+.shroom-room .lk-chat-form-button:not(:disabled):hover { color: white; background: #1d4ed8; }
+.shroom-room .lk-chat-form-input { order: 0 !important; }
+.shroom-room .lk-chat-form-button { order: 2 !important; }
+.shroom-voice-note-button { position: relative; order: 1 !important; display: grid; width: 2.75rem; min-width: 2.75rem; height: 2.75rem; flex: 0 0 2.75rem; place-items: center; border: 1px solid rgba(91,132,207,.3); border-radius: .75rem; padding: 0; color: #dbeafe; background: #172746; cursor: pointer; }
+.shroom-voice-note-button:hover { border-color: rgba(59,130,246,.62); color: white; background: #1d3158; }
+.shroom-voice-note-button.is-recording { border-color: rgba(248,113,113,.56); color: #fee2e2; background: rgba(127,29,29,.72); }
+.shroom-voice-note-button.is-recording span { position: absolute; right: 0; bottom: calc(100% + .55rem); display: block; width: max-content; padding: .35rem .55rem; border: 1px solid rgba(248,113,113,.34); border-radius: .55rem; color: #fee2e2; background: rgba(69,10,10,.96); font-family: var(--font-display); font-size: .6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.shroom-voice-note-button:disabled { cursor: wait; opacity: .58; }
+.shroom-voice-note-error { position: absolute; right: .75rem; bottom: calc(100% + .5rem); z-index: 2; max-width: calc(100% - 1.5rem); padding: .6rem .75rem; border: 1px solid rgba(248,113,113,.35); border-radius: .7rem; color: #fecaca; background: rgba(69,10,10,.96); font-size: .75rem; line-height: 1.4; box-shadow: 0 12px 30px rgba(0,0,0,.28); }
+.shroom-room .lk-chat-form { position: relative; }
+.shroom-room .lk-chat-entry[data-lk-message-origin="local"] { align-items: flex-end; }
+.shroom-room .lk-chat-entry .lk-meta-data { width: 100%; }
+.shroom-room .lk-chat-entry[data-lk-message-origin="local"] .lk-meta-data { justify-content: flex-end; }
+.shroom-room .lk-chat-entry[data-lk-message-origin="local"] .lk-meta-data .lk-participant-name { display: none; }
+.shroom-room .lk-chat-entry[data-lk-message-origin="local"] .lk-meta-data .lk-timestamp { margin-left: 0; }
+.shroom-voice-note { display: flex; width: auto; flex-direction: column; gap: .25rem; margin: 0 .25rem; padding: 0; border: 0; background: transparent; }
+.shroom-voice-note-meta { display: flex; align-items: center; justify-content: space-between; gap: .75rem; color: #8294b4; font-size: .75rem; }
+.shroom-voice-note-meta .lk-participant-name { overflow: hidden; margin-top: 1rem; color: #9fb0cc; text-overflow: ellipsis; white-space: nowrap; }
+.shroom-voice-note-body { display: block !important; width: min(14rem, calc(100% - 2rem)) !important; max-width: none !important; padding: .5rem .625rem !important; border: 1px solid rgba(91,132,207,.3); border-radius: 1rem !important; background: #172746 !important; }
+.shroom-voice-note[data-lk-message-origin="local"] .shroom-voice-note-body { border-color: rgba(96,165,250,.38); background: #244b91 !important; }
+.shroom-voice-note-body audio { display: block; width: 100%; height: 2.25rem; margin: 0 !important; color-scheme: dark; accent-color: #60a5fa; }
+.shroom-voice-note-playback-error { display: block; margin: .35rem .15rem 0 !important; color: #fecaca; font-size: .6875rem; line-height: 1.35; }
+.shroom-room .lk-button:hover { color: #8bb1ff; }
+.shroom-room:has(.lk-chat[style*="display: grid"]) .shroom-call-tool,
+.shroom-room:has(.lk-chat[style*="display: grid"]) .shroom-participant-panel { visibility: hidden; opacity: 0; pointer-events: none; }
+.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar { max-width: calc(100% - 1rem); padding: 6px; gap: 6px; }
+.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-button-group-menu { display: none !important; }
+.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-button,
+.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-chat-toggle,
+.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-disconnect-button { width: 2.75rem; min-width: 2.75rem; height: 2.75rem; flex: 0 0 2.75rem; gap: 0; padding: .5rem !important; border-radius: 9999px !important; font-size: 0; }
+.shroom-room-header { position: absolute; top: max(.75rem, env(safe-area-inset-top)); right: .75rem; left: .75rem; z-index: 50; display: flex; max-width: calc(100vw - 1.5rem); align-items: center; justify-content: space-between; gap: .75rem; padding: .5rem; border: 1px solid rgba(91,132,207,.24); border-radius: 1rem; background: rgba(12,22,43,.9); box-shadow: 0 18px 50px rgba(0,0,0,.26); backdrop-filter: blur(20px); transition: opacity .2s ease, transform .2s ease; }
+.shroom-header-button { color: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.07); }
+.shroom-header-button:hover { color: white; border-color: rgba(37,99,235,.55); background: rgba(37,99,235,.14); }
+.shroom-copy-button { display: inline-flex; height: 2.25rem; align-items: center; gap: .4rem; padding: 0 .65rem; border-radius: .65rem; font-size: .6875rem; font-weight: 600; transition: color .18s ease, border-color .18s ease, background-color .18s ease; }
+.shroom-call-tool { position: absolute; top: calc(max(.75rem, env(safe-area-inset-top)) + 4.25rem); z-index: 45; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid rgba(91,132,207,.24); border-radius: .8rem; color: rgba(226,235,250,.76); background: rgba(12,22,43,.9); box-shadow: 0 12px 30px rgba(0,0,0,.2); backdrop-filter: blur(16px); transition: color .18s ease, border-color .18s ease, background-color .18s ease, transform .18s ease; }
+.shroom-call-tool-label { display: inline; font-family: var(--font-display); font-size: .625rem; font-weight: 600; line-height: 1; letter-spacing: -.01em; }
+.shroom-call-tool:hover { color: white; border-color: rgba(37,99,235,.52); background: rgba(37,99,235,.2); transform: translateY(-1px); }
+.shroom-call-tool:active { transform: scale(.97); }
+.shroom-call-tool-participants { right: .75rem; }
+.shroom-call-tool-hand { right: 3.75rem; }
+.shroom-call-tool-recording, .shroom-call-tool-captions { display: flex; width: auto; padding: 0 .55rem; gap: .35rem; }
+.shroom-call-tool-captions { right: 6.75rem; min-width: 5.5rem; }
+.shroom-call-tool-recording { right: 12.5rem; min-width: 4.75rem; }
+.shroom-call-tool-hand.is-raised { color: #1c1917; border-color: #fbbf24; background: #fbbf24; }
+.shroom-call-tool-recording.is-recording { color: white; border-color: #dc2626; background: #dc2626; }
+.shroom-call-tool-captions.is-active { color: white; border-color: #3b82f6; background: #244b91; }
+.shroom-participant-panel { position: absolute; top: calc(max(.75rem, env(safe-area-inset-top)) + 7.5rem); right: .75rem; z-index: 55; width: min(20rem, calc(100vw - 1.5rem)); max-height: calc(100dvh - 9rem); overflow-y: auto; padding: 1rem; border: 1px solid rgba(255,255,255,.12); border-radius: 1rem; color: white; background: rgba(8,13,26,.94); box-shadow: 0 24px 70px rgba(0,0,0,.45); backdrop-filter: blur(20px); }
+.shroom-panel-close { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 0; border-radius: .7rem; color: rgba(255,255,255,.62); background: transparent; }
+.shroom-panel-close:hover { color: white; background: rgba(255,255,255,.08); }
+.shroom-network-notice { position: absolute; top: calc(max(.75rem, env(safe-area-inset-top)) + 7.5rem); left: 50%; z-index: 46; display: flex; width: max-content; max-width: calc(100vw - 1.5rem); align-items: center; gap: .5rem; padding: .65rem .8rem; border: 1px solid rgba(251,191,36,.32); border-radius: .8rem; color: #fef3c7; background: rgba(146,64,14,.92); box-shadow: 0 12px 32px rgba(0,0,0,.3); font-size: .75rem; font-weight: 650; line-height: 1.35; transform: translateX(-50%); }
+.shroom-network-notice svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.shroom-reaction-dock { position: absolute; bottom: calc(6rem + env(safe-area-inset-bottom)); left: 50%; z-index: 50; display: flex; align-items: center; justify-content: center; transform: translateX(-50%); }
+.shroom-call-tool-button { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid rgba(255,255,255,.11); border-radius: .85rem; color: rgba(255,255,255,.7); background: rgba(8,13,26,.82); box-shadow: 0 12px 30px rgba(0,0,0,.25); backdrop-filter: blur(16px); }
+.shroom-call-tool-button:hover { color: white; background: rgba(37,99,235,.2); }
+.shroom-reaction-menu { display: flex; max-width: calc(100vw - 1.5rem); align-items: center; gap: .25rem; overflow-x: auto; padding: .4rem; border: 1px solid rgba(255,255,255,.11); border-radius: 1rem; background: rgba(8,13,26,.9); box-shadow: 0 16px 38px rgba(0,0,0,.32); backdrop-filter: blur(18px); }
+.shroom-call-notice { position: absolute; left: 50%; z-index: 52; width: max-content; max-width: calc(100vw - 2rem); padding: .7rem .9rem; border: 1px solid rgba(255,255,255,.11); border-radius: .8rem; color: white; background: rgba(8,13,26,.92); box-shadow: 0 14px 34px rgba(0,0,0,.32); font-size: .8125rem; font-weight: 600; line-height: 1.5; text-align: center; transform: translateX(-50%); }
+.shroom-caption-line { bottom: calc(9.5rem + env(safe-area-inset-bottom)); width: min(42rem, calc(100vw - 2rem)); border-color: rgba(59,130,246,.34); color: #dbeafe; background: rgba(17,29,54,.96); }
+.shroom-caption-line strong { color: #7fb0ff; font-family: var(--font-display); font-weight: 600; }
+.shroom-caption-error { border-color: rgba(248,113,113,.34); color: #fecaca; background: rgba(69,10,10,.96); }
+.shroom-device-notice { bottom: calc(13rem + env(safe-area-inset-bottom)); }
+.shroom-recording-notice { top: calc(max(.75rem, env(safe-area-inset-top)) + 10.75rem); display: flex; align-items: center; gap: .65rem; border-color: rgba(248,113,113,.25); background: rgba(69,10,10,.94); text-align: left; }
+.shroom-recording-notice span { min-width: 0; }
+.shroom-notice-close { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border: 0; border-radius: .55rem; color: rgba(255,255,255,.68); background: rgba(255,255,255,.06); cursor: pointer; }
+.shroom-notice-close:hover { color: white; background: rgba(255,255,255,.12); }
+.shroom-notice-close:focus-visible { outline: 2px solid #fca5a5; outline-offset: 2px; }
+
+@media (min-width: 640px) {
+  .shroom-room-header { top: max(1rem, env(safe-area-inset-top)); right: auto; left: 1rem; width: auto; min-width: 18rem; max-width: min(26rem, calc(100vw - 18.5rem)); }
+  .shroom-call-tool { top: max(1rem, env(safe-area-inset-top)); }
+  .shroom-call-tool-participants { right: 1rem; }
+  .shroom-call-tool-hand { right: 4rem; }
+  .shroom-call-tool-captions { right: 7rem; }
+  .shroom-call-tool-recording { right: 12.75rem; }
+  .shroom-participant-panel { top: calc(max(1rem, env(safe-area-inset-top)) + 3.5rem); right: 1rem; }
+  .shroom-network-notice { top: calc(max(1rem, env(safe-area-inset-top)) + 3.5rem); }
+  .shroom-recording-notice { top: calc(max(1rem, env(safe-area-inset-top)) + 6.75rem); }
+}
+
+.shroom-admin { background: linear-gradient(145deg, #0b1020, #131d34); }
+.shroom-admin-card { border: 1px solid rgba(255,255,255,.1); border-radius: 1.5rem; padding: 1.25rem; background: rgba(16,26,50,.72); box-shadow: 0 24px 70px rgba(0,0,0,.25); backdrop-filter: blur(18px); }
+.shroom-metric-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+.shroom-metric-card { min-width: 0; padding: 1rem; border: 1px solid rgba(255,255,255,.1); border-radius: 1.25rem; background: rgba(16,26,50,.72); box-shadow: 0 18px 48px rgba(0,0,0,.18); }
+.shroom-metric-icon { display: inline-grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid rgba(255,255,255,.1); border-radius: .8rem; background: rgba(8,13,26,.65); }
+
+@media (min-width: 640px) {
+  .shroom-metric-grid { gap: 1.25rem; }
+  .shroom-metric-card { padding: 1.5rem; border-radius: 1.5rem; }
+}
+
+@media (min-width: 768px) {
+  .shroom-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shroom-metric-card:nth-child(5) { grid-column: 1 / -1; }
+}
+
+@media (min-width: 1024px) {
+  .shroom-metric-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .shroom-metric-card { grid-column: span 2; }
+  .shroom-metric-card:nth-child(4), .shroom-metric-card:nth-child(5) { grid-column: span 3; }
+}
+
 @layer utilities {
   .animation-delay-2000 {
     animation-delay: 2s;
@@ -11,12 +297,12 @@
   }
 }
 
-/* Google Meet / Gen-Z Vibe LiveKit Overrides */
+/* LiveKit primitives aligned to the Shroom interface system. */
 .lk-video-conference {
-  --lk-bg: #f8fafc;
-  --lk-control-bar-bg: rgba(255, 255, 255, 0.85);
+  --lk-bg: #080d1a;
+  --lk-control-bar-bg: rgba(8, 13, 26, 0.88);
   --lk-border-radius: 1rem;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
   backdrop-filter: blur(12px);
 }
 .dark .lk-video-conference {
@@ -29,7 +315,7 @@
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255,255,255,0.2);
   display: flex !important;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
   max-width: 95vw;
   margin-left: auto;
@@ -38,24 +324,65 @@
   gap: 8px;
 }
 
+.shroom-room .lk-video-conference-inner,
+.shroom-room .lk-grid-layout-wrapper,
+.shroom-room .lk-focus-layout-wrapper { min-width: 0; min-height: 0; }
+
+@media (max-width: 900px) {
+  .lk-control-bar {
+    max-width: calc(100vw - 2rem);
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .lk-control-bar .lk-button,
+  .lk-control-bar .lk-chat-toggle,
+  .lk-control-bar .lk-disconnect-button {
+    flex: 0 1 auto;
+    min-width: 2.75rem;
+    padding: .5rem .7rem !important;
+    font-size: .875rem;
+  }
+  .lk-control-bar .lk-button-group { min-width: 0; }
+  .lk-control-bar .lk-button-group-menu .lk-button { min-width: 2.5rem; padding: .5rem !important; }
+}
+
 @media (max-width: 640px) {
-  /* Hide the dropdown device selection arrows on mobile to save space */
   .lk-button-group-menu {
     display: none !important;
   }
   .lk-control-bar {
-    padding: 8px;
+    max-width: calc(100vw - 1rem);
+    padding: 6px;
+    gap: 6px;
     margin-bottom: max(8px, env(safe-area-inset-bottom));
   }
-  /* Ensure individual buttons shrink if needed */
   .lk-button {
     padding: 0.5rem !important;
   }
 }
 
+@media (max-width: 600px) {
+  .shroom-room .lk-participant-media-video[data-lk-local-participant="true"][data-lk-source="camera"] { object-fit: contain !important; background: #0a1122; }
+  .shroom-room.is-chrome-idle .shroom-room-header { opacity: 0; transform: translateY(-.5rem); pointer-events: none; }
+  .shroom-room.is-chrome-idle .shroom-call-tool,
+  .shroom-room.is-chrome-idle .shroom-participant-panel { opacity: 0; transform: translateY(-.5rem); pointer-events: none; }
+  .shroom-room.is-chrome-idle:has(.shroom-room-header :focus-visible) .shroom-room-header,
+  .shroom-room.is-chrome-idle:has(.shroom-call-tool:focus-visible) .shroom-call-tool,
+  .shroom-room.is-chrome-idle:has(.shroom-participant-panel :focus-visible) .shroom-participant-panel { opacity: 1; transform: none; pointer-events: auto; }
+  .shroom-room .lk-chat { top: .5rem; right: .5rem; bottom: calc(var(--lk-control-bar-height) + .75rem); left: .5rem; z-index: 40; width: auto; max-width: none; border-radius: 1.1rem; background: linear-gradient(160deg, #111d36, #0a1122); }
+  .shroom-room .lk-chat-messages { padding: .75rem; }
+  .shroom-room .lk-chat-form { gap: .5rem; max-height: none; padding: .65rem .75rem; }
+  .shroom-room .lk-chat-form-input { height: 2.75rem; padding: 0 .875rem; border-radius: .75rem; font-size: .875rem; }
+  .shroom-room .lk-chat-form-button { height: 2.75rem; min-width: 4rem; padding: 0 .875rem !important; border-radius: .75rem !important; font-size: .8125rem; font-weight: 600; }
+  .shroom-room:has(.lk-chat[style*="display: grid"]) .shroom-room-header,
+  .shroom-room:has(.lk-chat[style*="display: grid"]) .shroom-reaction-dock { visibility: hidden; opacity: 0; pointer-events: none; }
+}
+
 .lk-button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   border-radius: 9999px !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 .lk-button:hover {
   transform: translateY(-2px);
