@@ -45,18 +45,40 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Deploy to VPS
+      - name: Check out the commit being deployed
+        uses: actions/checkout@v4
+
+      - name: Record release commit
+        run: printf '%s\n' "$GITHUB_SHA" > release.sha
+
+      - name: Copy release to VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "backend,frontend,docker,docker-compose.prod.yml,release.sha"
+          target: "/var/www/shroom/.release"
+          rm: true
+
+      - name: Build and deploy release
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/www/shroom
-            git pull origin main
+            set -eu
+
+            cd /var/www/shroom/.release
+            test -f /var/www/shroom/.env
+
             if ! docker compose version >/dev/null 2>&1; then
-              echo "Docker Compose v2 is required. Install the docker-compose-plugin and rerun deployment." >&2
+              echo "Docker Compose v2 is required. Install docker-compose-v2 and rerun deployment." >&2
               exit 1
             fi
-            docker compose -f docker-compose.prod.yml build
-            docker compose -f docker-compose.prod.yml up -d
+
+            echo "Deploying commit $(cat release.sha)"
+            docker compose --project-name shroom --env-file /var/www/shroom/.env -f docker-compose.prod.yml build --pull
+            docker compose --project-name shroom --env-file /var/www/shroom/.env -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose --project-name shroom --env-file /var/www/shroom/.env -f docker-compose.prod.yml ps
