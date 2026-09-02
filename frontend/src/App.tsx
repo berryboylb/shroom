@@ -314,7 +314,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
             {!isAuthenticated ? (
               <form 
                 onSubmit={handleJoinLobby} 
-                className="shroom-entry-card shroom-panel-enter space-y-5"
+                className="shroom-entry-card shroom-name-card shroom-panel-enter space-y-5"
               >
                 <div><label className="shroom-eyebrow" htmlFor="display-name">First, what should we call you?</label>
                   <input

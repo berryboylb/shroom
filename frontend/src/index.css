@@ -79,15 +79,32 @@ input, select, textarea { font-family: var(--font-body); }
 }
 
 @media (max-width: 420px) {
-  .shroom-home { padding-left: 1rem; padding-right: 1rem; }
-  .shroom-home section { gap: 2rem; padding-top: 2.5rem; padding-bottom: 2.5rem; }
-  .shroom-home h1 { font-size: 2.85rem; }
+  .shroom-home {
+    min-height: 100svh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  }
+  .shroom-home .shroom-mark { width: 1.7rem; height: 1.7rem; border-radius: .5rem; }
+  .shroom-home .shroom-wordmark { font-size: 1rem; }
+  .shroom-home section { gap: 0; padding-top: 3rem; padding-bottom: 2rem; }
+  .shroom-home h1 { max-width: none; font-size: 2.4rem; line-height: 1.01; letter-spacing: -.042em; }
+  .shroom-home .shroom-home-copy { max-width: 32ch; margin-top: 1.15rem; font-size: .9375rem; line-height: 1.55; }
+  .shroom-home .shroom-entry-shell { margin-top: 1.75rem; }
   .shroom-home .shroom-entry-card { padding: .8rem; border-radius: 1rem; }
-  .shroom-home .shroom-entry-card .shroom-input { padding-top: 0; padding-bottom: 0; }
+  .shroom-home .shroom-name-card.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: .875rem; }
+  .shroom-home .shroom-eyebrow { margin-bottom: .5rem; font-size: .75rem; }
+  .shroom-home .shroom-entry-card .shroom-input { height: 2.875rem; padding: 0 .875rem; font-size: 1rem; border-radius: .75rem; }
   .shroom-home .shroom-entry-card .shroom-secondary-button,
-  .shroom-home .shroom-entry-card .shroom-primary-button { min-height: 2.65rem; padding-top: .55rem; padding-bottom: .55rem; }
+  .shroom-home .shroom-entry-card .shroom-primary-button { min-height: 2.875rem; padding: 0 .875rem; border-radius: .75rem; font-size: .875rem; }
   .shroom-home .shroom-action-button { height: 2.75rem; min-height: 2.75rem; padding: 0 .875rem; }
   .shroom-mode-option { padding-left: .5rem; padding-right: .5rem; font-size: .75rem; }
+}
+@media (max-width: 360px) {
+  .shroom-home section { padding-top: 2.5rem; }
+  .shroom-home h1 { font-size: 2.2rem; }
+  .shroom-home .shroom-home-copy { font-size: .875rem; }
+  .shroom-home .shroom-entry-shell { margin-top: 1.5rem; }
 }
 @media (min-width: 421px) and (max-width: 767px) {
   .shroom-home .shroom-home-title { font-size: 3.15rem; }
