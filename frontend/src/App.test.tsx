@@ -90,6 +90,9 @@ describe('room entry', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Join with link' }));
     fireEvent.change(await screen.findByPlaceholderText('Paste room link or code'), { target: { value: 'secure-room' } });
     fireEvent.click(screen.getByRole('button', { name: /Join Call/i }));
+    expect(await screen.findByTestId('prejoin')).toHaveTextContent('secure-room');
+    expect(roomsApi.joinRoom).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm devices' }));
     expect(await screen.findByText('Waiting for the host')).toBeInTheDocument();
     expect(screen.queryByTestId('room')).not.toBeInTheDocument();
   });
@@ -132,6 +135,7 @@ describe('room entry', () => {
     render(<App />);
 
     expect(await screen.findByTestId('prejoin')).toHaveTextContent('secure-room (Encrypted)');
+    expect(roomsApi.joinRoom).not.toHaveBeenCalled();
     expect(screen.queryByTestId('room')).not.toBeInTheDocument();
   });
 

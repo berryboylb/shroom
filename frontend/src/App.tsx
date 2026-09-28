@@ -91,7 +91,6 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   const [waitingRoom, setWaitingRoom] = useState<{roomId: string; e2eeKey?: string} | null>(null);
   const [secureMeeting, setSecureMeeting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isAutoRejoining, setIsAutoRejoining] = useState(false);
   const autoRejoinAttempted = useRef<string | null>(null);
   const isPageUnloading = useRef(false);
 
@@ -141,26 +140,11 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   const loginHref = `/login?returnTo=${encodeURIComponent(loginReturnTo === '/' ? '/' : loginReturnTo)}`;
 
   useEffect(() => {
-    if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining && autoRejoinAttempted.current !== urlRoom) {
+    if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && autoRejoinAttempted.current !== urlRoom) {
       autoRejoinAttempted.current = urlRoom;
-      setIsAutoRejoining(true);
-      roomsApi.joinRoom(urlRoom).then(joinData => {
-        if (joinData.status === 'pending') { setWaitingRoom({ roomId: urlRoom, e2eeKey: getE2EEKeyFromUrl() }); return; }
-        if (!joinData.livekit_token) throw new Error('Room token missing');
-        setPendingJoin({
-          id: joinData.room_id,
-          url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
-          token: joinData.livekit_token,
-          e2eeKey: getE2EEKeyFromUrl(),
-          hostApproval: Boolean(joinData.is_host && joinData.approval_required),
-        });
-      }).catch((err) => {
-        console.error("Auto rejoin failed", err);
-      }).finally(() => {
-        setIsAutoRejoining(false);
-      });
+      setPendingJoin({ id: urlRoom, url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`, token: '', e2eeKey: getE2EEKeyFromUrl() });
     }
-  }, [urlRoom, isAuthenticated, activeRoom, pendingJoin, isAutoRejoining]);
+  }, [urlRoom, isAuthenticated, activeRoom, pendingJoin]);
 
   useEffect(() => {
     if (!waitingRoom) return;
@@ -169,7 +153,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
       void roomsApi.joinRoom(waitingRoom.roomId).then(data => {
         if (!alive) return;
         if (data.status === 'pending' || !data.livekit_token) return;
-        setPendingJoin({ id: data.room_id, token: data.livekit_token, url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`, e2eeKey: waitingRoom.e2eeKey, hostApproval: Boolean(data.is_host && data.approval_required) });
+        setActiveRoom({ id: data.room_id, token: data.livekit_token, url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`, e2eeKey: waitingRoom.e2eeKey, hostApproval: Boolean(data.is_host && data.approval_required) });
         setWaitingRoom(null);
       }).catch(error => {
         if (!alive) return;
@@ -232,7 +216,6 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
     e.preventDefault();
     if (!joinCode.trim()) return;
     setLocalError(null);
-    setIsJoining(true);
     
     let extracted = joinCode.trim();
     let e2eeKey: string | undefined;
@@ -250,26 +233,12 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
     extracted = extracted.split('#')[0];
     const formattedCode = extracted.toLowerCase().replace(/\s+/g, '-');
 
-    try {
-      const joinData = await roomsApi.joinRoom(formattedCode);
-      if (joinData.status === 'pending') { setWaitingRoom({ roomId: formattedCode, e2eeKey }); return; }
-      if (!joinData.livekit_token) throw new Error('Room token missing');
-      setPendingJoin({
-        id: joinData.room_id,
+    setPendingJoin({
+        id: formattedCode,
         url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
-        token: joinData.livekit_token,
+        token: '',
         e2eeKey,
-        hostApproval: Boolean(joinData.is_host && joinData.approval_required),
       });
-    } catch (err: any) {
-      if (err.message && err.message.includes('not found')) {
-         setLocalError('Room not found. Check the code and try again.');
-      } else {
-         setLocalError(err.message || 'Failed to join room. Invalid code?');
-      }
-    } finally {
-      setIsJoining(false);
-    }
   };
 
   const displayError = localError || loginError?.message;
@@ -318,13 +287,37 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
           encrypted={Boolean(pendingJoin.e2eeKey)}
           encryptionSupported={supportsMediaE2EE()}
           encryptionAvailable={Boolean(pendingJoin.canEnableE2EE)}
-          onJoin={(mic, cam, videoId, audioId, enableE2EE) => {
+          joining={isJoining}
+          joinError={localError || undefined}
+          onJoin={async (mic, cam, videoId, audioId, enableE2EE) => {
+            if (isJoining) return;
             if (videoId) sessionStorage.setItem('shroom_videoId', videoId);
+            else sessionStorage.removeItem('shroom_videoId');
             if (audioId) sessionStorage.setItem('shroom_audioId', audioId);
+            else sessionStorage.removeItem('shroom_audioId');
             sessionStorage.setItem('shroom_cam', cam.toString());
             sessionStorage.setItem('shroom_mic', mic.toString());
-            setActiveRoom(enableE2EE ? { ...pendingJoin, e2eeKey: generateE2EEKey() } : pendingJoin);
-            setPendingJoin(null);
+            const key = enableE2EE ? generateE2EEKey() : pendingJoin.e2eeKey;
+            if (pendingJoin.token) {
+              setActiveRoom({ ...pendingJoin, e2eeKey: key });
+              setPendingJoin(null);
+              return;
+            }
+            setIsJoining(true);
+            setLocalError(null);
+            try {
+              const data = await roomsApi.joinRoom(pendingJoin.id);
+              if (data.status === 'pending') {
+                setWaitingRoom({ roomId: pendingJoin.id, e2eeKey: key });
+              } else if (data.livekit_token) {
+                setActiveRoom({ ...pendingJoin, id: data.room_id, token: data.livekit_token, e2eeKey: key, hostApproval: Boolean(data.is_host && data.approval_required) });
+              } else throw new Error('Room token missing');
+              setPendingJoin(null);
+            } catch (error) {
+              setLocalError(error instanceof Error ? error.message : 'Failed to join room.');
+            } finally {
+              setIsJoining(false);
+            }
           }}
           onCancel={() => {
             setPendingJoin(null);
@@ -342,15 +335,6 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
       <p className="text-white/60">You can join after the host approves your request.</p>
       <button className="shroom-quiet-button px-5 py-3" onClick={() => { void roomsApi.cancelRequest(waitingRoom.roomId).catch(() => {}); setWaitingRoom(null); window.history.replaceState({}, '', '/'); }}>Cancel request</button>
     </div>;
-  }
-
-  if (isAutoRejoining) {
-    return (
-      <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
-        <p className="font-medium animate-pulse">Preparing your room...</p>
-      </div>
-    );
   }
 
   return (

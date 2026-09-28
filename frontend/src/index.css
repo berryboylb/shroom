@@ -234,13 +234,6 @@ input, select, textarea { font-family: var(--font-body); }
 .shroom-voice-note-body audio { display: block; width: 100%; height: 2.25rem; margin: 0 !important; color-scheme: dark; accent-color: #60a5fa; }
 .shroom-voice-note-playback-error { display: block; margin: .35rem .15rem 0 !important; color: #fecaca; font-size: .6875rem; line-height: 1.35; }
 .shroom-room .lk-button:hover { color: #8bb1ff; }
-.shroom-room:has(.lk-chat[style*="display: grid"]) .shroom-call-tool,
-.shroom-room:has(.lk-chat[style*="display: grid"]) .shroom-participant-panel { visibility: hidden; opacity: 0; pointer-events: none; }
-.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar { max-width: calc(100% - 1rem); padding: 6px; gap: 6px; }
-.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-button-group-menu { display: none !important; }
-.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-button,
-.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-chat-toggle,
-.shroom-room:has(.lk-chat[style*="display: grid"]) .lk-control-bar .lk-disconnect-button { width: 2.75rem; min-width: 2.75rem; height: 2.75rem; flex: 0 0 2.75rem; gap: 0; padding: .5rem !important; border-radius: 9999px !important; font-size: 0; }
 .shroom-room-header { position: absolute; top: max(.75rem, env(safe-area-inset-top)); right: .75rem; left: .75rem; z-index: 50; display: flex; max-width: calc(100vw - 1.5rem); align-items: center; justify-content: space-between; gap: .75rem; padding: .5rem; border: 1px solid rgba(91,132,207,.24); border-radius: 1rem; background: rgba(12,22,43,.9); box-shadow: 0 18px 50px rgba(0,0,0,.26); backdrop-filter: blur(20px); transition: opacity .2s ease, transform .2s ease; }
 .shroom-header-button { color: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.07); }
 .shroom-header-button:hover { color: white; border-color: rgba(37,99,235,.55); background: rgba(37,99,235,.14); }
@@ -261,8 +254,13 @@ input, select, textarea { font-family: var(--font-body); }
 .shroom-host-approval-count { display: inline-grid; margin-left: .4rem; min-width: 1.3rem; height: 1.3rem; place-items: center; border-radius: 999px; background: #fbbf24; color: #1c1917; font-weight: 700; }
 .shroom-host-approval-panel { width: min(20rem, calc(100vw - 1.5rem)); max-height: 55dvh; overflow: auto; margin-top: .5rem; border: 1px solid rgba(255,255,255,.15); border-radius: 1rem; padding: 1rem; background: #111d36; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
 .shroom-conference { position: relative; display: flex; height: 100%; min-height: 0; flex-direction: column; }
-.shroom-conference-grid { flex: 1; min-height: 0; padding-bottom: .5rem; }
+.shroom-conference-main { position: relative; display: flex; flex: 1; min-height: 0; min-width: 0; }
+.shroom-conference-grid { flex: 1; min-width: 0; min-height: 0; padding-bottom: .5rem; }
 .shroom-conference-grid .lk-grid-layout { height: 100%; }
+.shroom-room .shroom-conference-main .lk-chat { position: relative; inset: auto; flex: 0 0 clamp(18rem, 28vw, 24rem); width: clamp(18rem, 28vw, 24rem); height: 100%; min-height: 0; }
+.shroom-controls { display: flex; width: max-content; max-width: calc(100% - 1rem); align-items: center; justify-content: center; gap: .4rem; margin: .5rem auto max(8px, env(safe-area-inset-bottom)); padding: .4rem; border: 1px solid rgba(91,132,207,.24); border-radius: 2rem; background: rgba(12,22,43,.92); box-shadow: 0 20px 60px rgba(0,0,0,.34); }
+.shroom-room .shroom-controls .lk-control-bar { display: flex; flex: 0 1 auto; width: auto; max-width: none; min-width: 0; gap: .4rem; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.shroom-controls .shroom-chat-open, .shroom-controls .shroom-share-button, .shroom-controls .lk-disconnect-button { position: static; z-index: auto; display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: .4rem; padding: .5rem .7rem; color: white; font-size: .75rem; white-space: nowrap; }
 .shroom-tile-wrap { position: relative; min-width: 0; min-height: 0; border-radius: 1.25rem; }
 .shroom-tile-wrap > .lk-participant-tile { height: 100%; }
 .shroom-tile-wrap.has-raised-hand { outline: 3px solid #fbbf24; outline-offset: -3px; box-shadow: 0 0 0 5px rgba(251,191,36,.18); }
@@ -272,9 +270,9 @@ input, select, textarea { font-family: var(--font-body); }
 .shroom-link-preview span, .shroom-link-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shroom-link-preview-domain { color: #93c5fd; font-size: .7rem; text-transform: uppercase; }
 .shroom-link-preview-image { width: calc(100% + 1.4rem); max-height: 8rem; object-fit: cover; margin: -.55rem -.7rem .4rem; }
-.shroom-chat-open { position: absolute; z-index: 30; bottom: 1.15rem; right: 6rem; color: white; }
+.shroom-chat-open { color: white; }
 .shroom-chat-close { position: absolute; z-index: 51; top: .8rem; right: 1rem; color: white; }
-.shroom-share-button { position: absolute; z-index: 30; bottom: 5.6rem; left: .75rem; display: flex; align-items: center; gap: .45rem; border: 1px solid rgba(91,132,207,.4); border-radius: .75rem; padding: .55rem .75rem; color: white; background: rgba(12,22,43,.92); font-size: .75rem; }
+.shroom-share-button { border: 1px solid rgba(91,132,207,.4); background: rgba(12,22,43,.92); }
 .shroom-share-button[aria-pressed="true"] { border-color: #fbbf24; color: #fbbf24; }
 .shroom-call-tool-recording.is-recording { color: white; border-color: #dc2626; background: #dc2626; }
 .shroom-call-tool-captions.is-active { color: white; border-color: #3b82f6; background: #244b91; }
@@ -413,7 +411,10 @@ input, select, textarea { font-family: var(--font-body); }
   .shroom-room.is-chrome-idle:has(.shroom-room-header :focus-visible) .shroom-room-header,
   .shroom-room.is-chrome-idle:has(.shroom-call-tool:focus-visible) .shroom-call-tool,
   .shroom-room.is-chrome-idle:has(.shroom-participant-panel :focus-visible) .shroom-participant-panel { opacity: 1; transform: none; pointer-events: auto; }
-  .shroom-room .lk-chat { top: .5rem; right: .5rem; bottom: calc(var(--lk-control-bar-height) + .75rem); left: .5rem; z-index: 40; width: auto; max-width: none; border-radius: 1.1rem; background: linear-gradient(160deg, #111d36, #0a1122); }
+  .shroom-room .shroom-conference-main .lk-chat { position: absolute; top: .5rem; right: .5rem; bottom: .5rem; left: .5rem; z-index: 40; width: auto; height: auto; max-width: none; border-radius: 1.1rem; background: linear-gradient(160deg, #111d36, #0a1122); }
+  .shroom-controls { gap: .2rem; padding: .25rem; }
+  .shroom-controls .shroom-chat-open span, .shroom-controls .shroom-share-button span, .shroom-controls .lk-disconnect-button span { display: none; }
+  .shroom-controls .shroom-chat-open, .shroom-controls .shroom-share-button, .shroom-controls .lk-disconnect-button { min-width: 2.75rem; padding: .5rem !important; }
   .shroom-room .lk-chat-messages { padding: .75rem; }
   .shroom-room .lk-chat-form { gap: .5rem; max-height: none; padding: .65rem .75rem; }
   .shroom-room .lk-chat-form-input { height: 2.75rem; padding: 0 .875rem; border-radius: .75rem; font-size: .875rem; }

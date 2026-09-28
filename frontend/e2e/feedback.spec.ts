@@ -49,12 +49,17 @@ test('guest waits without a meeting token until approved', async ({ page }) => {
   });
 
   await signInAsGuest(page, `/${roomId}`);
+  await expect(page.getByRole('heading', { name: 'Ready when you are?' })).toBeVisible();
+  expect(joinAttempts).toBe(0);
+  await page.getByRole('button', { name: 'Turn microphone off' }).click();
+  await page.getByRole('button', { name: 'Join room' }).click();
   await expect(page.getByRole('heading', { name: 'Waiting for the host' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Ready when you are?' })).toHaveCount(0);
   await expect(page.locator('video')).toHaveCount(0);
 
   approved = true;
-  await expect(page.getByRole('heading', { name: 'Ready when you are?' })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: 'Waiting for the host' })).toHaveCount(0, { timeout: 10_000 });
+  expect(await page.evaluate(() => sessionStorage.getItem('shroom_mic'))).toBe('false');
+  await expect(page.getByRole('heading', { name: 'Ready when you are?' })).toHaveCount(0);
   expect(joinAttempts).toBeGreaterThan(1);
 });
 
@@ -69,6 +74,8 @@ test('guest can cancel an approval request', async ({ page }) => {
   });
 
   await signInAsGuest(page, `/${roomId}`);
+  await expect(page.getByRole('heading', { name: 'Ready when you are?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Join room' }).click();
   await expect(page.getByRole('heading', { name: 'Waiting for the host' })).toBeVisible();
   await page.getByRole('button', { name: 'Cancel request' }).click();
   await expect(page.getByRole('heading', { name: 'Waiting for the host' })).toHaveCount(0);

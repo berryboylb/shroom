@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Chat, ControlBar, GridLayout, ParticipantTile, useLocalParticipant, useTrackRefContext, useTracks } from '@livekit/components-react';
+import { Chat, ControlBar, DisconnectButton, GridLayout, ParticipantTile, useLocalParticipant, useTrackRefContext, useTracks } from '@livekit/components-react';
 import { Track } from 'livekit-client';
-import { Hand, MessageSquare, MonitorUp, X } from 'lucide-react';
+import { Hand, LogOut, MessageSquare, MonitorUp, X } from 'lucide-react';
 import { LinkifiedMessage } from './chat/LinkifiedMessage';
 
 type HandState = { participantId: string; displayName: string };
@@ -33,14 +33,19 @@ export function MeetingConference() {
     return () => window.removeEventListener('shroom-hands-updated', update);
   }, []);
 
-  return <div className="lk-video-conference shroom-conference">
-    <HandsContext.Provider value={hands}>
-      <div className="shroom-conference-grid"><GridLayout tracks={tracks}><CallTile /></GridLayout></div>
-    </HandsContext.Provider>
-    <ControlBar controls={{ chat: false, screenShare: false }} />
-    <button type="button" className="shroom-share-button" aria-label={isScreenShareEnabled ? 'Stop sharing screen' : 'Share screen'} aria-pressed={isScreenShareEnabled} onClick={() => { void localParticipant.setScreenShareEnabled(!isScreenShareEnabled, { selfBrowserSurface: 'exclude' }).catch(() => {}); }}><MonitorUp size={19} /> <span>{isScreenShareEnabled ? 'Stop share' : 'Share'}</span></button>
-    <button type="button" className="shroom-chat-open" onClick={() => setShowChat(value => !value)} aria-label={showChat ? 'Close chat' : 'Open chat'} aria-expanded={showChat}><MessageSquare size={20} /></button>
-    {showChat && <button type="button" className="shroom-chat-close" onClick={() => setShowChat(false)} aria-label="Close chat"><X size={19} /></button>}
-    <Chat style={{ display: showChat ? 'grid' : 'none' }} messageFormatter={message => <LinkifiedMessage message={message} />} />
+  return <div className={`lk-video-conference shroom-conference ${showChat ? 'is-chat-open' : ''}`}>
+    <div className="shroom-conference-main">
+      <HandsContext.Provider value={hands}>
+        <div className="shroom-conference-grid"><GridLayout tracks={tracks}><CallTile /></GridLayout></div>
+      </HandsContext.Provider>
+      <Chat style={{ display: showChat ? 'grid' : 'none' }} messageFormatter={message => <LinkifiedMessage message={message} />} />
+      {showChat && <button type="button" className="shroom-chat-close" onClick={() => setShowChat(false)} aria-label="Close chat"><X size={19} /></button>}
+    </div>
+    <div className="shroom-controls">
+      <ControlBar controls={{ chat: false, screenShare: false, leave: false }} />
+      <button type="button" className="lk-button shroom-share-button" aria-label={isScreenShareEnabled ? 'Stop sharing screen' : 'Share screen'} aria-pressed={isScreenShareEnabled} onClick={() => { void localParticipant.setScreenShareEnabled(!isScreenShareEnabled, { selfBrowserSurface: 'exclude' }).catch(() => {}); }}><MonitorUp size={19} /> <span>{isScreenShareEnabled ? 'Stop share' : 'Share'}</span></button>
+      <button type="button" className="lk-button shroom-chat-open" onClick={() => setShowChat(value => !value)} aria-label={showChat ? 'Close chat' : 'Open chat'} aria-pressed={showChat} aria-expanded={showChat}><MessageSquare size={20} /><span>Chat</span></button>
+      <DisconnectButton className="lk-disconnect-button"><LogOut size={19} /><span>Leave</span></DisconnectButton>
+    </div>
   </div>;
 }

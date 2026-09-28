@@ -1,6 +1,16 @@
 export type SoundPreference = 'all' | 'hands' | 'off';
 
 const soundKey = 'shroom-sound-preference';
+let callAudio: AudioContext | null = null;
+
+export function unlockCallAudio() {
+  try {
+    callAudio ??= new window.AudioContext();
+    if (callAudio.state === 'suspended') void callAudio.resume().catch(() => {});
+  } catch {
+    // Audio is optional when the browser does not support it.
+  }
+}
 
 export function getSoundPreference(): SoundPreference {
   const saved = localStorage.getItem(soundKey);
@@ -14,9 +24,9 @@ export function setSoundPreference(value: SoundPreference) {
 
 function playNotes(notes: number[], volume: number) {
   try {
-    const AudioContextClass = window.AudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+    unlockCallAudio();
+    const ctx = callAudio;
+    if (!ctx) return;
     const sinkId = localStorage.getItem('shroom-audio-output');
     const route = ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> };
     const start = () => {
@@ -33,10 +43,13 @@ function playNotes(notes: number[], volume: number) {
         oscillator.start(begin);
         oscillator.stop(begin + 0.27);
       });
-      window.setTimeout(() => void ctx.close(), notes.length * 120 + 350);
     };
-    if (sinkId && route.setSinkId) void route.setSinkId(sinkId).then(start, start);
-    else start();
+    const play = () => {
+      if (sinkId && route.setSinkId) void route.setSinkId(sinkId).then(start, start);
+      else start();
+    };
+    if (ctx.state === 'suspended') void ctx.resume().then(play).catch(() => {});
+    else play();
   } catch {
     // Optional sounds must not interrupt a call.
   }
@@ -51,5 +64,5 @@ export function playLeaveChime() {
 }
 
 export function playHandChime() {
-  if (getSoundPreference() !== 'off') playNotes([880], 0.04);
+  if (getSoundPreference() !== 'off') playNotes([880, 1175], 0.09);
 }

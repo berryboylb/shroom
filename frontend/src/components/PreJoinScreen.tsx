@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Video, VideoOff, ArrowRight, Settings2, SwitchCamera } from 'lucide-react';
 import { ShroomLogo } from './ShroomLogo';
+import { unlockCallAudio } from '../utils/audio';
 
 interface Props {
   roomId: string;
@@ -9,11 +10,13 @@ interface Props {
   encrypted?: boolean;
   encryptionSupported?: boolean;
   encryptionAvailable?: boolean;
+  joining?: boolean;
+  joinError?: string;
   onJoin: (micEnabled: boolean, camEnabled: boolean, videoId?: string, audioId?: string, enableE2EE?: boolean) => void;
   onCancel: () => void;
 }
 
-export function PreJoinScreen({ roomId, displayName, encrypted = false, encryptionSupported = true, encryptionAvailable = false, onJoin, onCancel }: Props) {
+export function PreJoinScreen({ roomId, displayName, encrypted = false, encryptionSupported = true, encryptionAvailable = false, joining = false, joinError, onJoin, onCancel }: Props) {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   
@@ -252,6 +255,7 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
           </div>
         )}
 
+        {joinError && <p role="alert" className="mb-3 w-full text-sm text-red-300">{joinError}</p>}
         <div className="shroom-prejoin-actions">
           <button
             type="button"
@@ -262,11 +266,11 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
           </button>
           <button
             type="button"
-            onClick={() => onJoin(micEnabled, camEnabled, selectedVideo, selectedAudio, enableE2EE)}
-            disabled={encrypted && !encryptionSupported}
+            onClick={() => { unlockCallAudio(); onJoin(micEnabled, camEnabled, selectedVideo, selectedAudio, enableE2EE); }}
+            disabled={joining || (encrypted && !encryptionSupported)}
             className="shroom-primary-button shroom-prejoin-action min-w-0 flex-[2]"
           >
-            <span>Join room</span><ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span>{joining ? 'Joining...' : 'Join room'}</span><ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
           </button>
         </div>
       </motion.div>

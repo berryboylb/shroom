@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '../../store/authStore';
 import { authApi } from '../../api/auth';
 import { CallAccessibility } from '../CallAccessibility';
+import * as audio from '../../utils/audio';
 
 const localParticipant = {
   identity: 'alice',
@@ -88,6 +89,15 @@ describe('ordered raised hands', () => {
       type: 'room:hand:set',
       payload: { raised: false },
     });
+  });
+
+  it('plays the hand cue when the local participant raises a hand', async () => {
+    const cue = vi.spyOn(audio, 'playHandChime').mockImplementation(() => {});
+    render(<CallAccessibility roomId="room-1" />);
+    await waitFor(() => expect(FakeWebSocket.instances[0].sent.some(message => JSON.parse(message).type === 'room:join')).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: 'Raise hand (R)' }));
+    expect(cue).toHaveBeenCalledOnce();
+    expect(FakeWebSocket.instances[0].sent.map(message => JSON.parse(message))).toContainEqual({ type: 'room:hand:set', payload: { raised: true } });
   });
 
   it('refreshes authentication before reconnecting the signaling socket', async () => {

@@ -158,6 +158,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
 
   const toggleHand = useCallback(() => {
     const nextRaised = !isHandRaised;
+    if (nextRaised) playHandChime();
     const message = {
       type: 'room:hand:set',
       payload: { raised: nextRaised },
