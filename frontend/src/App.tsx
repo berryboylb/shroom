@@ -6,7 +6,7 @@ import { authApi } from './api/auth';
 
 const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
 const PreJoinScreen = lazy(() => import('./components/PreJoinScreen').then(m => ({ default: m.PreJoinScreen })));
-import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles, LogIn, LogOut } from 'lucide-react';
+import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles, LogIn, LogOut, ShieldCheck } from 'lucide-react';
 import { ShroomLogo } from './components/ShroomLogo';
 
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -427,7 +427,11 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
 
                   {mode === 'start' ? (
                     <div className="shroom-panel-enter">
-                      <label className="mb-4 flex items-center gap-3 text-sm text-white/75"><input type="checkbox" checked={secureMeeting} onChange={event => setSecureMeeting(event.target.checked)} /> Require host approval</label>
+                      <label className={`shroom-approval-option ${secureMeeting ? 'is-enabled' : ''}`}>
+                        <span className="shroom-approval-copy"><ShieldCheck aria-hidden="true" size={18} /><span><strong>Require host approval</strong><small id="host-approval-help">Let guests in when you are ready</small></span></span>
+                        <input className="shroom-approval-input" type="checkbox" aria-label="Require host approval" aria-describedby="host-approval-help" checked={secureMeeting} onChange={event => setSecureMeeting(event.target.checked)} />
+                        <span className="shroom-approval-switch" aria-hidden="true"><span /></span>
+                      </label>
                       <button
                         onClick={handleCreateRoom}
                         disabled={isCreatingRoom}
