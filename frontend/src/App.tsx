@@ -93,6 +93,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   const [localError, setLocalError] = useState<string | null>(null);
   const autoRejoinAttempted = useRef<string | null>(null);
   const isPageUnloading = useRef(false);
+  const intentionallyLeaving = useRef(false);
 
   // Prepare a room from a shared/restored URL. This deliberately stops at the
   // pre-join screen; only its explicit Join action may activate the meeting.
@@ -166,6 +167,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
 
   useEffect(() => {
     if (activeRoom) {
+      intentionallyLeaving.current = false;
       sessionStorage.setItem('activeRoom', JSON.stringify(activeRoom));
       const fragment = activeRoom.e2eeKey ? `#key=${encodeURIComponent(activeRoom.e2eeKey)}` : '';
       window.history.replaceState({}, '', `/${activeRoom.id}${fragment}`);
@@ -257,8 +259,15 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
           serverUrl={activeRoom.url} 
           e2eeKey={activeRoom.e2eeKey}
           hostApproval={activeRoom.hostApproval}
+          onLeave={() => {
+            intentionallyLeaving.current = true;
+            autoRejoinAttempted.current = activeRoom.id;
+            sessionStorage.removeItem('activeRoom');
+            window.history.replaceState({}, '', '/');
+            setActiveRoom(null);
+          }}
           onDisconnected={() => {
-            if (isPageUnloading.current) return;
+            if (isPageUnloading.current || intentionallyLeaving.current) return;
             // A transport drop is handled by LiveKit's reconnect loop. Keep
             // the room mounted so the reconnect overlay can reassure the user
             // instead of throwing them back to the lobby.
@@ -267,7 +276,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
             // room UI. This prevents a transport blip from exposing pre-join
             // controls or losing the auto-rejoin context.
             window.setTimeout(() => {
-              if (navigator.onLine) {
+              if (navigator.onLine && !intentionallyLeaving.current) {
                 setActiveRoom(null);
                 window.history.replaceState({}, '', '/');
               }

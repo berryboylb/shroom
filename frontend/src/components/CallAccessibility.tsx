@@ -19,7 +19,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-export function CallAccessibility({ roomId }: { roomId: string }) {
+export function CallAccessibility({ roomId, onLeave }: { roomId: string; onLeave: () => void }) {
   const room = useRoomContext();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -200,7 +200,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
         localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled);
         setAnnouncement(localParticipant.isCameraEnabled ? 'Camera off' : 'Camera on');
       } else if (event.key.toLowerCase() === 'l') {
-        room.disconnect();
+        onLeave();
       } else if (event.key.toLowerCase() === 'p') {
         setShowParticipants(value => !value);
       } else if (event.key.toLowerCase() === 'r') {
@@ -230,7 +230,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [localParticipant, room, toggleHand]);
+  }, [localParticipant, room, toggleHand, onLeave]);
 
   return (
     <>

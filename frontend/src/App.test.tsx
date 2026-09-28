@@ -42,7 +42,7 @@ vi.mock('./components/PreJoinScreen', () => ({
 }));
 
 vi.mock('./components/Room', () => ({
-  Room: ({ roomId }: { roomId: string }) => <div data-testid="room">Meeting {roomId}</div>,
+  Room: ({ roomId, onLeave }: { roomId: string; onLeave: () => void }) => <div data-testid="room">Meeting {roomId}<button onClick={onLeave}>Leave meeting</button></div>,
 }));
 
 vi.mock('./components/GoogleLoginPage', () => ({
@@ -151,6 +151,21 @@ describe('room entry', () => {
 
     expect(await screen.findByTestId('room')).toHaveTextContent('abc-defg-hij');
     expect(screen.queryByTestId('prejoin')).not.toBeInTheDocument();
+    expect(roomsApi.joinRoom).not.toHaveBeenCalled();
+  });
+
+  it('returns home immediately when leaving and clears the reconnect session', async () => {
+    window.history.replaceState({}, '', '/abc-defg-hij');
+    sessionStorage.setItem('activeRoom', JSON.stringify({
+      id: 'abc-defg-hij', url: 'ws://localhost', token: 'previous-livekit-token',
+    }));
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave meeting' }));
+
+    expect(screen.queryByTestId('room')).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+    expect(sessionStorage.getItem('activeRoom')).toBeNull();
     expect(roomsApi.joinRoom).not.toHaveBeenCalled();
   });
 

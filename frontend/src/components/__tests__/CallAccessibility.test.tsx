@@ -66,7 +66,7 @@ describe('ordered raised hands', () => {
   });
 
   it('raises and lowers through signaling and displays server queue positions', async () => {
-    render(<CallAccessibility roomId="room-1" />);
+    render(<CallAccessibility roomId="room-1" onLeave={vi.fn()} />);
     const socket = FakeWebSocket.instances[0];
 
     await waitFor(() => expect(socket.sent.some(message => JSON.parse(message).type === 'room:join')).toBe(true));
@@ -93,11 +93,18 @@ describe('ordered raised hands', () => {
 
   it('plays the hand cue when the local participant raises a hand', async () => {
     const cue = vi.spyOn(audio, 'playHandChime').mockImplementation(() => {});
-    render(<CallAccessibility roomId="room-1" />);
+    render(<CallAccessibility roomId="room-1" onLeave={vi.fn()} />);
     await waitFor(() => expect(FakeWebSocket.instances[0].sent.some(message => JSON.parse(message).type === 'room:join')).toBe(true));
     fireEvent.click(screen.getByRole('button', { name: 'Raise hand (R)' }));
     expect(cue).toHaveBeenCalledOnce();
     expect(FakeWebSocket.instances[0].sent.map(message => JSON.parse(message))).toContainEqual({ type: 'room:hand:set', payload: { raised: true } });
+  });
+
+  it('uses the immediate leave action for the keyboard shortcut', () => {
+    const onLeave = vi.fn();
+    render(<CallAccessibility roomId="room-1" onLeave={onLeave} />);
+    fireEvent.keyDown(window, { key: 'l' });
+    expect(onLeave).toHaveBeenCalledOnce();
   });
 
   it('refreshes authentication before reconnecting the signaling socket', async () => {
@@ -107,7 +114,7 @@ describe('ordered raised hands', () => {
       display_name: 'Alice',
       is_guest: true,
     });
-    const { unmount } = render(<CallAccessibility roomId="room-1" />);
+    const { unmount } = render(<CallAccessibility roomId="room-1" onLeave={vi.fn()} />);
     await vi.runAllTicks();
 
     FakeWebSocket.instances[0].emit('close');

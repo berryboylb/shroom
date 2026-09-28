@@ -26,10 +26,11 @@ interface RoomProps {
   serverUrl: string;
   e2eeKey?: string;
   hostApproval?: boolean;
+  onLeave: () => void;
   onDisconnected: () => void;
 }
 
-export function Room({ roomId, token, serverUrl, e2eeKey, hostApproval, onDisconnected }: RoomProps) {
+export function Room({ roomId, token, serverUrl, e2eeKey, hostApproval, onLeave, onDisconnected }: RoomProps) {
   const [e2ee, setE2EE] = useState<RoomOptions['e2ee']>();
   const [chromeIdle, setChromeIdle] = useState(false);
   const chromeTimer = useRef<number | undefined>(undefined);
@@ -116,7 +117,7 @@ export function Room({ roomId, token, serverUrl, e2eeKey, hostApproval, onDiscon
         <EmojiReactions />
         <ChimeController />
         <DeviceStateSync />
-        <CallAccessibility roomId={roomId} />
+        <CallAccessibility roomId={roomId} onLeave={onLeave} />
         <ReconnectingOverlay />
         <DeviceRecovery />
         <LiveCaptions />
@@ -125,7 +126,7 @@ export function Room({ roomId, token, serverUrl, e2eeKey, hostApproval, onDiscon
         {hostApproval && <HostApproval roomId={roomId} />}
         
         <div className="flex-1 p-0 sm:p-4 sm:pb-0 h-full">
-          <MeetingConference />
+          <MeetingConference onLeave={onLeave} />
         </div>
         <RoomAudioRenderer />
       </LiveKitRoom>
