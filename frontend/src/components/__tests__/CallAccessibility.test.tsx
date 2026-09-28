@@ -95,6 +95,7 @@ describe('ordered raised hands', () => {
     vi.spyOn(authApi, 'refresh').mockResolvedValue({
       access_token: 'refreshed-token',
       display_name: 'Alice',
+      is_guest: true,
     });
     const { unmount } = render(<CallAccessibility roomId="room-1" />);
     await vi.runAllTicks();

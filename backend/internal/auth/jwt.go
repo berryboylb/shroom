@@ -24,16 +24,16 @@ type Claims struct {
 }
 
 func (s *TokenService) GenerateGuestToken(displayName string) (string, error) {
-	return s.generateToken(uuid.NewString(), displayName, "access", 15*time.Minute)
+	return s.generateToken(uuid.NewString(), displayName, true, "access", 15*time.Minute)
 }
 
 func (s *TokenService) GenerateGuestSession(displayName string) (accessToken string, refreshToken string, err error) {
 	userID := uuid.NewString()
-	accessToken, err = s.generateToken(userID, displayName, "access", 15*time.Minute)
+	accessToken, err = s.generateToken(userID, displayName, true, "access", 15*time.Minute)
 	if err != nil {
 		return "", "", err
 	}
-	refreshToken, err = s.generateToken(userID, displayName, "refresh", 24*time.Hour)
+	refreshToken, err = s.generateToken(userID, displayName, true, "refresh", 24*time.Hour)
 	return accessToken, refreshToken, err
 }
 
@@ -42,15 +42,19 @@ func (s *TokenService) RefreshAccessToken(refreshToken string) (string, error) {
 	if err != nil || claims.TokenType != "refresh" {
 		return "", jwt.ErrTokenInvalidClaims
 	}
-	return s.generateToken(claims.UserID, claims.DisplayName, "access", 15*time.Minute)
+	return s.generateToken(claims.UserID, claims.DisplayName, claims.IsGuest, "access", 15*time.Minute)
 }
 
-func (s *TokenService) generateToken(userID, displayName, tokenType string, ttl time.Duration) (string, error) {
+func (s *TokenService) GenerateAccountAccessToken(userID, displayName string) (string, error) {
+	return s.generateToken(userID, displayName, false, "access", 15*time.Minute)
+}
+
+func (s *TokenService) generateToken(userID, displayName string, isGuest bool, tokenType string, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID:      userID,
 		DisplayName: displayName,
-		IsGuest:     true,
+		IsGuest:     isGuest,
 		TokenType:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "shroom",

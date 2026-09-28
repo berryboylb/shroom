@@ -38,10 +38,12 @@ export function Home({ onJoin }: HomeProps) {
       // If authenticated, process the room
       if (isJoinCode) {
         const joinData = await roomsApi.joinRoom(input.trim());
+        if (!joinData.livekit_token) throw new Error('Waiting for host approval');
         onJoin({ id: joinData.room_id, url: 'ws://localhost:7880', token: joinData.livekit_token });
       } else {
         const roomDetails = await createRoom(`${input.trim()}'s Room`);
         const joinData = await roomsApi.joinRoom(roomDetails.ID);
+        if (!joinData.livekit_token) throw new Error('Waiting for host approval');
         onJoin({ id: roomDetails.ID, url: 'ws://localhost:7880', token: joinData.livekit_token });
       }
     } catch (err: any) {

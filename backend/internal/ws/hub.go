@@ -20,9 +20,14 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 
-	redisClient *redis.Client
-	handQueues  map[string][]raisedHand
-	ActiveCount int32
+	redisClient  *redis.Client
+	handQueues   map[string][]raisedHand
+	ActiveCount  int32
+	canSubscribe func(context.Context, string, string) bool
+}
+
+func (h *Hub) SetRoomAuthorizer(check func(context.Context, string, string) bool) {
+	h.canSubscribe = check
 }
 
 type roomMessage struct {
@@ -234,6 +239,15 @@ func (h *Hub) HandleMessage(client *Client, msg map[string]interface{}) {
 	switch msgType {
 	case "room:join":
 		roomID, _ := payload["roomId"].(string)
+		if roomID == "" || h.canSubscribe == nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		allowed := h.canSubscribe(ctx, roomID, client.UserID)
+		cancel()
+		if !allowed {
+			return
+		}
 		client.RoomID = roomID
 		h.roomJoin <- client
 

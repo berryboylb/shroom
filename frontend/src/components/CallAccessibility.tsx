@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalParticipant, useParticipants, useRoomContext } from '@livekit/components-react';
-import { RoomEvent } from 'livekit-client';
-import { Hand, Users, X } from 'lucide-react';
+import { LocalVideoTrack, RoomEvent, Track, supportsAudioOutputSelection } from 'livekit-client';
+import { Hand, Users, X, SwitchCamera } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { authApi } from '../api/auth';
+import { getSoundPreference, playHandChime, setSoundPreference, type SoundPreference } from '../utils/audio';
+import { LightVideoEnhancement } from '../lib/videoEnhancement';
 
 interface RaisedHand {
   participantId: string;
@@ -21,6 +23,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
   const room = useRoomContext();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
+  const localParticipantId = localParticipant.identity;
   const accessToken = useAuthStore(state => state.accessToken);
   const setAccessToken = useAuthStore(state => state.setAccessToken);
   const setDisplayName = useAuthStore(state => state.setDisplayName);
@@ -28,10 +31,63 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
   const [showParticipants, setShowParticipants] = useState(false);
   const [raisedHands, setRaisedHands] = useState<RaisedHand[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
+  const raisedHandsRef = useRef<RaisedHand[]>([]);
+  const pendingHandState = useRef<boolean | null>(null);
+  const receivedHandQueue = useRef(false);
+  const [soundPreference, updateSoundPreference] = useState<SoundPreference>(getSoundPreference);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedOutput, setSelectedOutput] = useState(() => localStorage.getItem('shroom-audio-output') || 'default');
+  const [deviceError, setDeviceError] = useState('');
+  const [enhancementEnabled, setEnhancementEnabled] = useState(false);
   const pushToTalkWasMuted = useRef(false);
 
   const localHandPosition = raisedHands.findIndex(hand => hand.participantId === localParticipant.identity);
   const isHandRaised = localHandPosition >= 0;
+
+  useEffect(() => {
+    const refresh = () => void navigator.mediaDevices?.enumerateDevices().then(setDevices).catch(() => {});
+    refresh();
+    navigator.mediaDevices?.addEventListener('devicechange', refresh);
+    return () => navigator.mediaDevices?.removeEventListener('devicechange', refresh);
+  }, []);
+
+  const flipCamera = async () => {
+    const cameras = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
+    try {
+      if (cameras.length >= 2) {
+        const current = room.getActiveDevice('videoinput');
+        const next = cameras[(cameras.findIndex(device => device.deviceId === current) + 1) % cameras.length];
+        await room.switchActiveDevice('videoinput', next.deviceId);
+      } else {
+        const track = localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+        if (!(track instanceof LocalVideoTrack)) throw new Error('Camera unavailable');
+        const current = track.mediaStreamTrack.getSettings().facingMode;
+        await track.restartTrack({ facingMode: current === 'environment' ? 'user' : 'environment' });
+      }
+      setDeviceError('');
+    }
+    catch { setDeviceError('Could not switch camera.'); }
+  };
+
+  const changeOutput = async (deviceId: string) => {
+    try {
+      await room.switchActiveDevice('audiooutput', deviceId);
+      localStorage.setItem('shroom-audio-output', deviceId);
+      setSelectedOutput(deviceId);
+      setDeviceError('');
+    } catch { setDeviceError('Could not switch speaker. Use your system sound settings.'); }
+  };
+
+  const toggleEnhancement = async () => {
+    const track = localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+    if (!(track instanceof LocalVideoTrack)) { setDeviceError('Turn on your camera first.'); return; }
+    try {
+      if (enhancementEnabled) await track.stopProcessor();
+      else await track.setProcessor(new LightVideoEnhancement());
+      setEnhancementEnabled(value => !value);
+      setDeviceError('');
+    } catch { setDeviceError('Video enhancement is unavailable on this device.'); }
+  };
 
   useEffect(() => {
     if (!accessToken) return;
@@ -39,6 +95,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
     let reconnectTimer: number | undefined;
 
     const connect = (token: string) => {
+      receivedHandQueue.current = false;
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
       socketRef.current = socket;
@@ -50,8 +107,27 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
           const message = JSON.parse(event.data);
           if (message.type === 'ws:authenticated') {
             socket.send(JSON.stringify({ type: 'room:join', payload: { roomId } }));
+            if (pendingHandState.current !== null) {
+              socket.send(JSON.stringify({
+                type: 'room:hand:set',
+                payload: { raised: pendingHandState.current },
+              }));
+              pendingHandState.current = null;
+            }
           } else if (message.type === 'hand_queue:updated' && Array.isArray(message.payload?.queue)) {
-            setRaisedHands(message.payload.queue);
+            const nextHands = message.payload.queue as RaisedHand[];
+            const previousIds = new Set(raisedHandsRef.current.map(hand => hand.participantId));
+            const newRemoteHand = nextHands.some(hand =>
+              hand.participantId !== localParticipantId && !previousIds.has(hand.participantId)
+            );
+            raisedHandsRef.current = nextHands;
+            setRaisedHands(nextHands);
+            window.dispatchEvent(new CustomEvent('shroom-hands-updated', { detail: nextHands }));
+            if (newRemoteHand && receivedHandQueue.current) {
+              playHandChime();
+              setAnnouncement('A participant raised their hand');
+            }
+            receivedHandQueue.current = true;
           }
         } catch {
           // Ignore malformed signaling messages; the call itself remains usable.
@@ -78,18 +154,19 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [accessToken, roomId, setAccessToken, setDisplayName]);
+  }, [accessToken, localParticipantId, roomId, setAccessToken, setDisplayName]);
 
   const toggleHand = useCallback(() => {
     const nextRaised = !isHandRaised;
-    if (socketRef.current?.readyState !== WebSocket.OPEN) {
-      setAnnouncement('Hand raise is reconnecting. Try again shortly.');
-      return;
-    }
-    socketRef.current.send(JSON.stringify({
+    const message = {
       type: 'room:hand:set',
       payload: { raised: nextRaised },
-    }));
+    };
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(message));
+    } else {
+      pendingHandState.current = nextRaised;
+    }
     setAnnouncement(nextRaised ? 'Hand raise requested' : 'Hand lower requested');
   }, [isHandRaised]);
 
@@ -180,6 +257,7 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
           </span>
         )}
       </button>
+      {(devices.filter(device => device.kind === 'videoinput').length > 1 || navigator.maxTouchPoints > 0) && <button type="button" className="shroom-call-tool shroom-call-tool-flip" aria-label="Flip camera" onClick={() => void flipCamera()}><SwitchCamera aria-hidden="true" className="h-5 w-5" /></button>}
       {showParticipants && (
         <aside
           aria-label="Participants"
@@ -225,6 +303,25 @@ export function CallAccessibility({ roomId }: { roomId: string }) {
             ))}
           </ul>
           <p className="sr-only">Shortcuts: M microphone, V camera, L leave, R raise hand, hold Space to talk, P participants.</p>
+          <label className="mt-4 block text-sm text-white/75" htmlFor="call-sounds">Call sounds</label>
+          <select id="call-sounds" className="shroom-input mt-2 w-full" value={soundPreference} onChange={event => {
+            const value = event.target.value as SoundPreference;
+            setSoundPreference(value);
+            updateSoundPreference(value);
+          }}>
+            <option value="all">Join, leave, and hands</option>
+            <option value="hands">Raised hands only</option>
+            <option value="off">Off</option>
+          </select>
+          {supportsAudioOutputSelection() ? <>
+            <label className="mt-4 block text-sm text-white/75" htmlFor="call-speaker">Speaker</label>
+            <select id="call-speaker" className="shroom-input mt-2 w-full" value={selectedOutput} onChange={event => void changeOutput(event.target.value)}>
+              <option value="default">System default</option>
+              {devices.filter(device => device.kind === 'audiooutput' && device.deviceId !== 'default').map(device => <option key={device.deviceId} value={device.deviceId}>{device.label || 'Speaker'}</option>)}
+            </select>
+          </> : <p className="mt-4 text-xs text-white/50">Speaker selection is controlled by your browser or device.</p>}
+          <label className="mt-4 flex items-center gap-3 text-sm text-white/75"><input type="checkbox" checked={enhancementEnabled} onChange={() => void toggleEnhancement()} /> Enhance video</label>
+          {deviceError && <p role="alert" className="mt-3 text-sm text-amber-300">{deviceError}</p>}
         </aside>
       )}
     </>

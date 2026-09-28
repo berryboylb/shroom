@@ -3,8 +3,7 @@ import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
 export function useAuth() {
-  const setAccessToken = useAuthStore(state => state.setAccessToken);
-  const setDisplayName = useAuthStore(state => state.setDisplayName);
+  const setSession = useAuthStore(state => state.setSession);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<Error | null>(null);
 
@@ -14,8 +13,7 @@ export function useAuth() {
 
     void authApi.loginGuest(displayName)
       .then((session) => {
-        setAccessToken(session.access_token);
-        setDisplayName(session.display_name);
+        setSession(session);
       })
       .catch((error: unknown) => {
         const normalizedError = error instanceof Error ? error : new Error('Unable to sign in');
@@ -23,10 +21,28 @@ export function useAuth() {
         console.error('Login failed:', normalizedError.message);
       })
       .finally(() => setIsLoggingIn(false));
-  }, [setAccessToken, setDisplayName]);
+  }, [setSession]);
+
+  const loginGoogle = useCallback(async (credential: string) => {
+    setIsLoggingIn(true);
+    setLoginError(null);
+    try {
+      const session = await authApi.loginGoogle(credential);
+      setSession(session);
+      localStorage.setItem('shroom-account-session', '1');
+      return session;
+    } catch (error: unknown) {
+      const normalizedError = error instanceof Error ? error : new Error('Unable to sign in with Google');
+      setLoginError(normalizedError);
+      throw normalizedError;
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, [setSession]);
 
   return {
     loginGuest,
+    loginGoogle,
     isLoggingIn,
     loginError,
   };

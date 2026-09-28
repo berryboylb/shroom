@@ -1,6 +1,5 @@
 import {
   LiveKitRoom,
-  VideoConference,
   RoomAudioRenderer,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -15,6 +14,8 @@ import { DeviceRecovery } from './DeviceRecovery';
 import { LiveCaptions } from './LiveCaptions';
 import { LocalRecording } from './LocalRecording';
 import { VoiceNotes } from './VoiceNotes';
+import { HostApproval } from './HostApproval';
+import { MeetingConference } from './MeetingConference';
 import { ExternalE2EEKeyProvider, VideoPresets, type RoomOptions } from 'livekit-client';
 import E2EEWorker from 'livekit-client/e2ee-worker?worker';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,10 +25,11 @@ interface RoomProps {
   token: string;
   serverUrl: string;
   e2eeKey?: string;
+  hostApproval?: boolean;
   onDisconnected: () => void;
 }
 
-export function Room({ roomId, token, serverUrl, e2eeKey, onDisconnected }: RoomProps) {
+export function Room({ roomId, token, serverUrl, e2eeKey, hostApproval, onDisconnected }: RoomProps) {
   const [e2ee, setE2EE] = useState<RoomOptions['e2ee']>();
   const [chromeIdle, setChromeIdle] = useState(false);
   const chromeTimer = useRef<number | undefined>(undefined);
@@ -62,6 +64,7 @@ export function Room({ roomId, token, serverUrl, e2eeKey, onDisconnected }: Room
   const initialAudio = sessionStorage.getItem('shroom_mic') !== 'false';
   const videoId = sessionStorage.getItem('shroom_videoId');
   const audioId = sessionStorage.getItem('shroom_audioId');
+  const outputId = localStorage.getItem('shroom-audio-output');
 
   if (e2eeKey && !e2ee) {
     return <div role="status" className="flex h-[100dvh] items-center justify-center bg-slate-950 text-white">Preparing end-to-end encryption…</div>;
@@ -89,6 +92,7 @@ export function Room({ roomId, token, serverUrl, e2eeKey, onDisconnected }: Room
           audioCaptureDefaults: {
             deviceId: audioId || undefined,
           },
+          audioOutput: { deviceId: outputId || undefined },
           publishDefaults: {
             simulcast: true,
             videoSimulcastLayers: [
@@ -118,9 +122,10 @@ export function Room({ roomId, token, serverUrl, e2eeKey, onDisconnected }: Room
         <LiveCaptions />
         <LocalRecording roomId={roomId} />
         <VoiceNotes />
+        {hostApproval && <HostApproval roomId={roomId} />}
         
         <div className="flex-1 p-0 sm:p-4 sm:pb-0 h-full">
-          <VideoConference />
+          <MeetingConference />
         </div>
         <RoomAudioRenderer />
       </LiveKitRoom>

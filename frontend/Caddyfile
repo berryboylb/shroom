@@ -6,7 +6,7 @@
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
-        Content-Security-Policy "default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ws: wss: http: https:; img-src 'self' data:; media-src 'self' blob:;"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com; frame-src https://accounts.google.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://accounts.google.com; font-src 'self' data:; connect-src 'self' ws: wss: http: https:; img-src 'self' data: https://lh3.googleusercontent.com; media-src 'self' blob:;"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(self), microphone=(self), display-capture=(self), geolocation=()"
     }
@@ -20,7 +20,7 @@
     @homeDocument path / /index.html
     header @homeDocument Cache-Control "no-cache"
 
-    @privateRoutes path_regexp privateRoutes ^/(?:admin|[a-z0-9]{3}-[a-z0-9]{4}-[a-z0-9]{3})/?$
+    @privateRoutes path_regexp privateRoutes ^/(?:admin|login|[a-z0-9]{3}-[a-z0-9]{4}-[a-z0-9]{3})/?$
     header @privateRoutes {
         X-Robots-Tag "noindex, nofollow, noarchive"
         Cache-Control "no-store"

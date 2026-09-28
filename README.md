@@ -60,6 +60,7 @@ To deploy automatically on every push to `main`, add the following Secrets to yo
 - `VPS_SSH_KEY`: Your private SSH key.
 
 Once configured, GitHub Actions will automatically connect, pull the latest code, and orchestrate the Docker container swap!
+The deploy job now backs up the existing bundled Postgres database into `/var/www/shroom/backups`, applies the additive schema changes, checks the schema, then starts the new containers and probes `/api/health/ready`. It stops before replacing the app if the backup, migration, or schema check fails. The existing `/var/www/shroom/.env` supplies production configuration; the workflow does not replace it.
 
 ## 💻 Local Development
 
@@ -67,6 +68,10 @@ Once configured, GitHub Actions will automatically connect, pull the latest code
 2. Run the infrastructure:
    ```bash
    docker-compose up -d postgres redis livekit
+   ```
+   Apply database migrations before starting the backend. The meeting approval feature requires migration 009 (after the existing migrations):
+   ```bash
+   make db-migrate-up
    ```
 3. Start the Go backend:
    ```bash
@@ -79,6 +84,16 @@ Once configured, GitHub Actions will automatically connect, pull the latest code
    npm install
    npm run dev
    ```
+
+### Optional Google Sign-In
+
+Create a Google OAuth 2.0 Web Client and set `GOOGLE_CLIENT_ID` in the backend environment. Add `http://localhost:5173` and the production site origin to the client's authorized JavaScript origins. Shroom continues to support guest access when this value is empty.
+
+### Meeting controls
+
+Choose **Require host approval** before starting a room to admit participants from the in-call request panel. The server does not issue a LiveKit token to a waiting participant. The participant list also contains call sound and speaker settings, plus an optional lightweight video enhancement. Mobile users with multiple cameras can flip between them before or during a call. Speaker selection appears only when the browser supports output routing.
+
+For browser tests and a two-device acceptance checklist, see [feedback verification](docs/feedback-verification.md).
 
 ---
 *Built for speed. Built for quality. Built for the modern web.*

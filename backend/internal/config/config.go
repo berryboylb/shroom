@@ -10,6 +10,7 @@ import (
 type ServerConfig struct {
 	Port               string   `envconfig:"PORT" default:"8080"`
 	JWTSecret          string   `envconfig:"JWT_SECRET" required:"true"`
+	GoogleClientID     string   `envconfig:"GOOGLE_CLIENT_ID"`
 	CORSAllowedOrigins []string `envconfig:"CORS_ALLOWED_ORIGINS" default:"https://shroom.agentiq.build,http://localhost:5173"`
 }
 
@@ -37,7 +38,7 @@ type Config struct {
 // Load reads .env if present and populates the Config struct via env vars.
 func Load() (*Config, error) {
 	_ = godotenv.Load("../.env") // Try to load .env from repo root if running locally
-	_ = godotenv.Load()             // Also try current directory
+	_ = godotenv.Load()          // Also try current directory
 
 	var cfg Config
 	if err := envconfig.Process("", &cfg); err != nil {

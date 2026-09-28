@@ -1,57 +1,55 @@
-export const playJoinChime = () => {
+export type SoundPreference = 'all' | 'hands' | 'off';
+
+const soundKey = 'shroom-sound-preference';
+
+export function getSoundPreference(): SoundPreference {
+  const saved = localStorage.getItem(soundKey);
+  return saved === 'all' || saved === 'off' ? saved : 'hands';
+}
+
+export function setSoundPreference(value: SoundPreference) {
+  localStorage.setItem(soundKey, value);
+  window.dispatchEvent(new Event('shroom-sound-change'));
+}
+
+function playNotes(notes: number[], volume: number) {
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    
-    const playNote = (freq: number, startTime: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
-      
-      gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
-      gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + startTime + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + 0.5);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.start(ctx.currentTime + startTime);
-      osc.stop(ctx.currentTime + startTime + 0.5);
+    const AudioContextClass = window.AudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const sinkId = localStorage.getItem('shroom-audio-output');
+    const route = ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> };
+    const start = () => {
+      notes.forEach((frequency, index) => {
+        const begin = ctx.currentTime + index * 0.12;
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0, begin);
+        gain.gain.linearRampToValueAtTime(volume, begin + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.001, begin + 0.26);
+        oscillator.connect(gain).connect(ctx.destination);
+        oscillator.start(begin);
+        oscillator.stop(begin + 0.27);
+      });
+      window.setTimeout(() => void ctx.close(), notes.length * 120 + 350);
     };
+    if (sinkId && route.setSinkId) void route.setSinkId(sinkId).then(start, start);
+    else start();
+  } catch {
+    // Optional sounds must not interrupt a call.
+  }
+}
 
-    playNote(1046.50, 0); // C6
-    playNote(1318.51, 0.15); // E6
-  } catch {}
-};
+export function playJoinChime() {
+  if (getSoundPreference() === 'all') playNotes([784, 988], 0.035);
+}
 
-export const playLeaveChime = () => {
-  try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    
-    const playNote = (freq: number, startTime: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
-      
-      gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
-      gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + startTime + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + 0.5);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.start(ctx.currentTime + startTime);
-      osc.stop(ctx.currentTime + startTime + 0.5);
-    };
+export function playLeaveChime() {
+  if (getSoundPreference() === 'all') playNotes([784, 659], 0.025);
+}
 
-    playNote(1046.50, 0); // C6
-    playNote(880.00, 0.15); // A5
-  } catch {}
-};
+export function playHandChime() {
+  if (getSoundPreference() !== 'off') playNotes([880], 0.04);
+}

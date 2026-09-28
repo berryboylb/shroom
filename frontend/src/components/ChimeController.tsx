@@ -21,10 +21,5 @@ export function ChimeController() {
     };
   }, [room]);
 
-  // Play the join chime exactly once for the local user themselves when they enter
-  useEffect(() => {
-    playJoinChime();
-  }, []);
-
   return null;
 }

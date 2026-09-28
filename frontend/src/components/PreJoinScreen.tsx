@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Video, VideoOff, ArrowRight, Settings2 } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ArrowRight, Settings2, SwitchCamera } from 'lucide-react';
 import { ShroomLogo } from './ShroomLogo';
 
 interface Props {
@@ -21,6 +21,7 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<string>('');
   const [selectedAudio, setSelectedAudio] = useState<string>('');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [showSettings, setShowSettings] = useState(false);
   const [enableE2EE, setEnableE2EE] = useState(false);
 
@@ -32,16 +33,15 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
   const streamRef = useRef<MediaStream | null>(null);
   useEffect(() => { streamRef.current = stream; }, [stream]);
 
-  const loadMedia = async (vid: string, aud: string) => {
+  const loadMedia = async (vid: string, aud: string, face?: 'user' | 'environment') => {
     try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
       const constraints: MediaStreamConstraints = {
-        video: vid ? { deviceId: { exact: vid } } : true,
+        video: face ? { facingMode: { ideal: face } } : vid ? { deviceId: { exact: vid } } : true,
         audio: aud ? { deviceId: { exact: aud } } : true,
       };
       const s = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = s;
       setStream(s);
       
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -49,6 +49,10 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
       setAudioDevices(devices.filter(d => d.kind === 'audioinput'));
       
       if (!vid) setSelectedVideo(s.getVideoTracks()[0]?.getSettings().deviceId || '');
+      if (face) {
+        setSelectedVideo(s.getVideoTracks()[0]?.getSettings().deviceId || '');
+        setFacingMode(face);
+      }
       if (!aud) setSelectedAudio(s.getAudioTracks()[0]?.getSettings().deviceId || '');
     } catch (e) {
       console.warn(e);
@@ -172,6 +176,15 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
             >
               {camEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
             </button>
+            {(videoDevices.length > 1 || navigator.maxTouchPoints > 0) && <button type="button" className="shroom-device-button" aria-label="Flip camera" onClick={() => {
+              if (videoDevices.length > 1) {
+                const index = videoDevices.findIndex(device => device.deviceId === selectedVideo);
+                const next = videoDevices[(index + 1) % videoDevices.length];
+                void loadMedia(next.deviceId, selectedAudio);
+              } else {
+                void loadMedia('', selectedAudio, facingMode === 'user' ? 'environment' : 'user');
+              }
+            }}><SwitchCamera className="h-6 w-6" /></button>}
           </div>
         </div>
 

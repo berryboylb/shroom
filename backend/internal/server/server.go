@@ -75,12 +75,14 @@ func New(cfg *config.Config) *Server {
 	r.Use(customMiddleware.Metrics)
 
 	tokenService := auth.NewTokenService(cfg.Server.JWTSecret)
-	authHandler := auth.NewHandler(tokenService)
+	authRepo := auth.NewRepository(dbConn)
+	authHandler := auth.NewGoogleHandler(tokenService, authRepo, auth.NewGoogleVerifier(), cfg.Server.GoogleClientID)
 	roomRepo := room.NewRepository(dbConn)
 	roomService := room.NewService(roomRepo, cfg)
 	roomHandler := room.NewHandler(roomService)
 
 	hub := ws.NewHub(redisClient.Raw())
+	hub.SetRoomAuthorizer(roomService.CanSubscribe)
 	go hub.Run()
 	wsHandler := ws.NewHandler(hub, tokenService, cfg.Server.CORSAllowedOrigins)
 
@@ -104,6 +106,9 @@ func New(cfg *config.Config) *Server {
 	r.Get("/api/health/ready", sReadinessHandler(dbConn, redisClient, cfg.LiveKit.URL))
 
 	r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/api/auth/guest", authHandler.HandleGuestLogin)
+	r.Get("/api/auth/config", authHandler.HandleAuthConfig)
+	r.With(httprate.LimitByIP(20, 1*time.Minute)).Get("/api/auth/google/nonce", authHandler.HandleGoogleNonce)
+	r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/api/auth/google", authHandler.HandleGoogleLogin)
 	r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/api/auth/refresh", authHandler.HandleRefresh)
 	r.Post("/api/auth/logout", authHandler.HandleLogout)
 
@@ -114,6 +119,11 @@ func New(cfg *config.Config) *Server {
 		r.Use(auth.AuthMiddleware(tokenService))
 		r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/api/rooms", roomHandler.HandleCreateRoom)
 		r.Post("/api/rooms/{id}/join", roomHandler.HandleJoinRoom)
+		r.Get("/api/rooms/{id}/requests", roomHandler.HandlePendingJoins)
+		r.Post("/api/rooms/{id}/requests/decision", roomHandler.HandleDecideJoin)
+		r.Post("/api/rooms/{id}/requests/cancel", roomHandler.HandleCancelJoin)
+		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/api/link-preview", roomHandler.HandleLinkPreview)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Get("/api/link-preview/image", roomHandler.HandleLinkPreviewImage)
 		r.Post("/api/telemetry", roomHandler.HandleTelemetry)
 		r.Get("/api/diagnostics", roomHandler.HandleDiagnostics)
 		r.Get("/api/admin/telemetry", roomHandler.HandleRecentTelemetry)

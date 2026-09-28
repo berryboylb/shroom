@@ -1,4 +1,5 @@
 import { useAuthStore } from '../store/authStore';
+import type { AuthSession } from '../store/authStore';
 
 export class ApiError extends Error {
   status: number;
@@ -28,8 +29,8 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}, 
   if (response.status === 401 && mayRefresh && endpoint !== '/api/auth/guest') {
     const refresh = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
     if (refresh.ok) {
-      const data = await refresh.json() as { access_token: string };
-      useAuthStore.getState().setAccessToken(data.access_token);
+      const data = await refresh.json() as AuthSession;
+      useAuthStore.getState().setSession(data);
       return apiClient<T>(endpoint, options, false);
     }
     useAuthStore.getState().clearAuth();

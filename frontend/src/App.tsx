@@ -6,12 +6,13 @@ import { authApi } from './api/auth';
 
 const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
 const PreJoinScreen = lazy(() => import('./components/PreJoinScreen').then(m => ({ default: m.PreJoinScreen })));
-import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles, LogIn, LogOut } from 'lucide-react';
 import { ShroomLogo } from './components/ShroomLogo';
 
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const GoogleLoginPage = lazy(() => import('./components/GoogleLoginPage').then(m => ({ default: m.GoogleLoginPage })));
 
-type RoomConnection = { id: string; url: string; token: string; e2eeKey?: string; canEnableE2EE?: boolean };
+type RoomConnection = { id: string; url: string; token: string; e2eeKey?: string; canEnableE2EE?: boolean; hostApproval?: boolean };
 
 function getE2EEKeyFromUrl(): string | undefined {
   return new URLSearchParams(window.location.hash.replace(/^#/, '')).get('key') || undefined;
@@ -63,6 +64,13 @@ export default function App() {
       </Suspense>
     );
   }
+  if (currentPath === 'login') {
+    return (
+      <Suspense fallback={<div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>}>
+        <GoogleLoginPage />
+      </Suspense>
+    );
+  }
 
   return <MeetingApp currentPath={currentPath} />;
 }
@@ -80,6 +88,9 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   );
 
   const [pendingJoin, setPendingJoin] = useState<RoomConnection | null>(null);
+  const [waitingRoom, setWaitingRoom] = useState<{roomId: string; e2eeKey?: string} | null>(null);
+  const [secureMeeting, setSecureMeeting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [isAutoRejoining, setIsAutoRejoining] = useState(false);
   const autoRejoinAttempted = useRef<string | null>(null);
   const isPageUnloading = useRef(false);
@@ -87,9 +98,11 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   // Prepare a room from a shared/restored URL. This deliberately stops at the
   // pre-join screen; only its explicit Join action may activate the meeting.
   const isAuthenticated = !!useAuthStore(state => state.accessToken);
-  const setAccessToken = useAuthStore(state => state.setAccessToken);
-  const setStoredDisplayName = useAuthStore(state => state.setDisplayName);
+  const setSession = useAuthStore(state => state.setSession);
+  const clearAuth = useAuthStore(state => state.clearAuth);
   const savedDisplayName = useAuthStore(state => state.displayName);
+  const isGuest = useAuthStore(state => state.isGuest);
+  const avatarUrl = useAuthStore(state => state.avatarUrl);
   useEffect(() => {
     const markPageUnloading = () => { isPageUnloading.current = true; };
     window.addEventListener('pagehide', markPageUnloading);
@@ -104,27 +117,42 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
     // A clean visitor has no session hint, so avoid an expected 401 request.
     // Returning visitors keep their display name in this tab and can refresh
     // the HttpOnly session without delaying the public landing page.
-    if (isAuthenticated || !savedDisplayName) return;
+    const hasAccountSession = localStorage.getItem('shroom-account-session') === '1';
+    if (isAuthenticated || (!savedDisplayName && !hasAccountSession)) return;
     let cancelled = false;
     authApi.refresh().then(session => {
       if (!cancelled) {
-        setAccessToken(session.access_token);
-        setStoredDisplayName(session.display_name);
+        setSession(session);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      if (hasAccountSession) localStorage.removeItem('shroom-account-session');
+    });
     return () => { cancelled = true; };
-  }, [isAuthenticated, savedDisplayName, setAccessToken, setStoredDisplayName]);
+  }, [isAuthenticated, savedDisplayName, setSession]);
+
+  const handleLogout = async () => {
+    await authApi.logout().catch(() => {});
+    localStorage.removeItem('shroom-account-session');
+    clearAuth();
+    window.location.assign('/');
+  };
+
+  const loginReturnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const loginHref = `/login?returnTo=${encodeURIComponent(loginReturnTo === '/' ? '/' : loginReturnTo)}`;
 
   useEffect(() => {
     if (urlRoom && isAuthenticated && !activeRoom && !pendingJoin && !isAutoRejoining && autoRejoinAttempted.current !== urlRoom) {
       autoRejoinAttempted.current = urlRoom;
       setIsAutoRejoining(true);
       roomsApi.joinRoom(urlRoom).then(joinData => {
+        if (joinData.status === 'pending') { setWaitingRoom({ roomId: urlRoom, e2eeKey: getE2EEKeyFromUrl() }); return; }
+        if (!joinData.livekit_token) throw new Error('Room token missing');
         setPendingJoin({
           id: joinData.room_id,
           url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
           token: joinData.livekit_token,
           e2eeKey: getE2EEKeyFromUrl(),
+          hostApproval: Boolean(joinData.is_host && joinData.approval_required),
         });
       }).catch((err) => {
         console.error("Auto rejoin failed", err);
@@ -133,6 +161,24 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
       });
     }
   }, [urlRoom, isAuthenticated, activeRoom, pendingJoin, isAutoRejoining]);
+
+  useEffect(() => {
+    if (!waitingRoom) return;
+    let alive = true;
+    const timer = window.setInterval(() => {
+      void roomsApi.joinRoom(waitingRoom.roomId).then(data => {
+        if (!alive) return;
+        if (data.status === 'pending' || !data.livekit_token) return;
+        setPendingJoin({ id: data.room_id, token: data.livekit_token, url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`, e2eeKey: waitingRoom.e2eeKey, hostApproval: Boolean(data.is_host && data.approval_required) });
+        setWaitingRoom(null);
+      }).catch(error => {
+        if (!alive) return;
+        setWaitingRoom(null);
+        setLocalError(error instanceof Error ? error.message : 'The host declined your request.');
+      });
+    }, 2500);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [waitingRoom]);
 
   useEffect(() => {
     if (activeRoom) {
@@ -146,7 +192,6 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
     }
   }, [activeRoom]);
 
-  const [localError, setLocalError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
@@ -165,14 +210,16 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
     setLocalError(null);
     setIsCreatingRoom(true);
     try {
-      const room = await roomsApi.createRoom('Instant Room');
+      const room = await roomsApi.createRoom('Instant Room', secureMeeting);
       const joinData = await roomsApi.joinRoom(room.ID);
+      if (!joinData.livekit_token) throw new Error('Unable to enter your room');
       
       setPendingJoin({
         id: joinData.room_id,
         url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
         token: joinData.livekit_token,
         canEnableE2EE: supportsMediaE2EE(),
+        hostApproval: Boolean(joinData.is_host && room.ApprovalRequired),
       });
     } catch (err: any) {
       setLocalError(err.message || 'Failed to create room');
@@ -205,11 +252,14 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
 
     try {
       const joinData = await roomsApi.joinRoom(formattedCode);
+      if (joinData.status === 'pending') { setWaitingRoom({ roomId: formattedCode, e2eeKey }); return; }
+      if (!joinData.livekit_token) throw new Error('Room token missing');
       setPendingJoin({
         id: joinData.room_id,
         url: window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.host}`,
         token: joinData.livekit_token,
         e2eeKey,
+        hostApproval: Boolean(joinData.is_host && joinData.approval_required),
       });
     } catch (err: any) {
       if (err.message && err.message.includes('not found')) {
@@ -237,6 +287,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
           token={activeRoom.token} 
           serverUrl={activeRoom.url} 
           e2eeKey={activeRoom.e2eeKey}
+          hostApproval={activeRoom.hostApproval}
           onDisconnected={() => {
             if (isPageUnloading.current) return;
             // A transport drop is handled by LiveKit's reconnect loop. Keep
@@ -284,6 +335,15 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
     );
   }
 
+  if (waitingRoom) {
+    return <div role="status" className="flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-slate-950 p-6 text-center text-white">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+      <h1 className="text-xl font-semibold">Waiting for the host</h1>
+      <p className="text-white/60">You can join after the host approves your request.</p>
+      <button className="shroom-quiet-button px-5 py-3" onClick={() => { void roomsApi.cancelRequest(waitingRoom.roomId).catch(() => {}); setWaitingRoom(null); window.history.replaceState({}, '', '/'); }}>Cancel request</button>
+    </div>;
+  }
+
   if (isAutoRejoining) {
     return (
       <div className="min-h-[100dvh] bg-slate-950 flex flex-col items-center justify-center text-slate-400">
@@ -296,11 +356,24 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   return (
     <main className="shroom-home min-h-[100dvh] overflow-hidden px-5 py-6 text-white sm:px-8 sm:py-8">
       <div className="shroom-noise" aria-hidden="true" />
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="shroom-mark"><ShroomLogo className="h-5 w-5" /></div>
           <span className="shroom-wordmark text-lg">Shroom</span>
         </div>
+        {!isAuthenticated || isGuest ? (
+          <a href={loginHref} className="shroom-header-button inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium">
+            <LogIn aria-hidden="true" className="h-4 w-4" /> Log in
+          </a>
+        ) : (
+          <div className="flex items-center gap-2">
+            {avatarUrl ? <img src={avatarUrl} alt="" className="h-8 w-8 rounded-full" referrerPolicy="no-referrer" /> : null}
+            <span className="hidden max-w-40 truncate text-sm text-white/70 sm:block">{savedDisplayName}</span>
+            <button type="button" onClick={() => void handleLogout()} className="shroom-header-button inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium">
+              <LogOut aria-hidden="true" className="h-4 w-4" /> Sign out
+            </button>
+          </div>
+        )}
       </header>
 
       <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-7rem)] w-full max-w-6xl items-center gap-14 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20 lg:py-16">
@@ -361,6 +434,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
 
                   {mode === 'start' ? (
                     <div className="shroom-panel-enter">
+                      <label className="mb-4 flex items-center gap-3 text-sm text-white/75"><input type="checkbox" checked={secureMeeting} onChange={event => setSecureMeeting(event.target.checked)} /> Require host approval</label>
                       <button
                         onClick={handleCreateRoom}
                         disabled={isCreatingRoom}

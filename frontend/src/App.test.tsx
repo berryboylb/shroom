@@ -8,8 +8,21 @@ vi.mock('./hooks/useAuth', () => ({
 }));
 
 vi.mock('./store/authStore', () => ({
-  useAuthStore: (selector: (state: { accessToken: string; displayName: string }) => unknown) =>
-    selector({ accessToken: 'guest-token', displayName: 'Femi' }),
+  useAuthStore: (selector: (state: {
+    accessToken: string;
+    displayName: string;
+    isGuest: boolean;
+    avatarUrl: null;
+    setSession: ReturnType<typeof vi.fn>;
+    clearAuth: ReturnType<typeof vi.fn>;
+  }) => unknown) => selector({
+    accessToken: 'guest-token',
+    displayName: 'Femi',
+    isGuest: true,
+    avatarUrl: null,
+    setSession: vi.fn(),
+    clearAuth: vi.fn(),
+  }),
 }));
 
 vi.mock('./api/rooms', () => ({
@@ -32,6 +45,10 @@ vi.mock('./components/Room', () => ({
   Room: ({ roomId }: { roomId: string }) => <div data-testid="room">Meeting {roomId}</div>,
 }));
 
+vi.mock('./components/GoogleLoginPage', () => ({
+  GoogleLoginPage: () => <div data-testid="google-login-page">Google login</div>,
+}));
+
 describe('room entry', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,6 +65,12 @@ describe('room entry', () => {
     await waitFor(() => expect(screen.getByTestId('room')).toHaveTextContent(roomId));
   };
 
+  it('uses a dedicated login page', async () => {
+    window.history.replaceState({}, '', '/login');
+    render(<App />);
+    expect(await screen.findByTestId('google-login-page')).toBeInTheDocument();
+  });
+
   it('requires device confirmation when creating a room', async () => {
     vi.mocked(roomsApi.createRoom).mockResolvedValue({ ID: 'new-room-id', Title: 'Instant Room' });
     vi.mocked(roomsApi.joinRoom).mockResolvedValue({
@@ -59,6 +82,16 @@ describe('room entry', () => {
     fireEvent.click(screen.getByRole('button', { name: /Start Instant Call/i }));
 
     await expectDeviceGate('new-room-id');
+  });
+
+  it('asks for host approval without entering the media room', async () => {
+    vi.mocked(roomsApi.joinRoom).mockResolvedValue({ room_id: 'secure-room', status: 'pending' });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Join with link' }));
+    fireEvent.change(await screen.findByPlaceholderText('Paste room link or code'), { target: { value: 'secure-room' } });
+    fireEvent.click(screen.getByRole('button', { name: /Join Call/i }));
+    expect(await screen.findByText('Waiting for the host')).toBeInTheDocument();
+    expect(screen.queryByTestId('room')).not.toBeInTheDocument();
   });
 
   it('requires device confirmation when manually joining by code', async () => {
