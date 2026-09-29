@@ -24,9 +24,11 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Frontend Typecheck
+      - name: Frontend Build and Bundle Budget
         working-directory: ./frontend
-        run: npx tsc -b
+        run: |
+          npm run build
+          npm run bundle:check
 
       - name: Frontend Unit Tests
         working-directory: ./frontend

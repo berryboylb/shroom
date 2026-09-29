@@ -30,4 +30,7 @@ export const roomsApi = {
     method: 'POST', body: JSON.stringify({ participant_id: participantId, approve }),
   }),
   cancelRequest: (roomId: string) => apiClient<void>(`/api/rooms/${roomId}/requests/cancel`, { method: 'POST' }),
+  sendFeedback: (roomId: string, rating: 'good' | 'problem', issue = '', note = '') => apiClient<void>(`/api/rooms/${roomId}/feedback`, {
+    method: 'POST', body: JSON.stringify({ rating, issue, note }),
+  }),
 };

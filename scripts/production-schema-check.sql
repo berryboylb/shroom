@@ -10,6 +10,7 @@ SELECT CASE WHEN
     AND to_regclass('public.refresh_tokens') IS NOT NULL
     AND to_regclass('public.auth_identities') IS NOT NULL
     AND to_regclass('public.room_join_requests') IS NOT NULL
+    AND to_regclass('public.post_call_feedback') IS NOT NULL
     AND NOT EXISTS (
         SELECT 1 FROM (VALUES
             ('users', 'id'), ('users', 'email'), ('users', 'display_name'),
@@ -38,7 +39,11 @@ SELECT CASE WHEN
             ('auth_identities', 'created_at'),
             ('room_join_requests', 'room_id'), ('room_join_requests', 'participant_id'),
             ('room_join_requests', 'display_name'), ('room_join_requests', 'status'),
-            ('room_join_requests', 'requested_at'), ('room_join_requests', 'decided_at')
+            ('room_join_requests', 'requested_at'), ('room_join_requests', 'decided_at'),
+            ('post_call_feedback', 'id'), ('post_call_feedback', 'room_id'),
+            ('post_call_feedback', 'participant_id'), ('post_call_feedback', 'rating'),
+            ('post_call_feedback', 'issue'), ('post_call_feedback', 'note'),
+            ('post_call_feedback', 'created_at')
         ) AS required(table_name, column_name)
         WHERE NOT EXISTS (
             SELECT 1 FROM information_schema.columns actual
@@ -100,7 +105,8 @@ SELECT CASE WHEN
             ('idx_room_participants_active'), ('idx_call_sessions_room_id'),
             ('idx_call_sessions_started_at'), ('idx_refresh_tokens_user_id'),
             ('idx_refresh_tokens_expires_at'), ('idx_auth_identities_user_id'),
-            ('idx_refresh_tokens_token_hash'), ('idx_room_join_requests_pending')
+            ('idx_refresh_tokens_token_hash'), ('idx_room_join_requests_pending'),
+            ('idx_post_call_feedback_created_at')
         ) AS required(index_name)
         WHERE to_regclass('public.' || required.index_name) IS NULL
     )

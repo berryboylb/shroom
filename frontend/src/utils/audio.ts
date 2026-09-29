@@ -66,3 +66,13 @@ export function playLeaveChime() {
 export function playHandChime() {
   if (getSoundPreference() !== 'off') playNotes([880, 1175], 0.09);
 }
+
+export function playSpeakerTest() {
+  playNotes([660, 880], 0.08);
+}
+
+export function playHostRequestChime() {
+  if (getSoundPreference() !== 'off' && localStorage.getItem('shroom-request-sound') !== 'off') {
+    playNotes([740, 988], 0.065);
+  }
+}

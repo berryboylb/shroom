@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type CSSProperties } from 'react';
 import { useDataChannel, useLocalParticipant } from '@livekit/components-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { SmilePlus, X } from 'lucide-react';
 
 interface Reaction {
@@ -45,42 +44,29 @@ export function EmojiReactions() {
   return (
     <>
       <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden flex justify-center items-end pb-32">
-        <AnimatePresence>
           {reactions.map((r) => (
-            <motion.div
+            <div
               key={r.id}
-              initial={{ opacity: 0, y: 0, x: r.x, scale: 0.5 }}
-              animate={{ opacity: [0, 1, 1, 0], y: -200, scale: [0.5, 1.5, 1.5, 1] }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 2, ease: "easeOut" }}
-              className="absolute text-5xl"
-              style={{ filter: 'drop-shadow(0px 4px 10px rgba(0,0,0,0.3))' }}
+              className="shroom-floating-reaction absolute text-5xl"
+              style={{ '--reaction-x': `${r.x}px` } as CSSProperties}
             >
               {r.emoji}
-            </motion.div>
+            </div>
           ))}
-        </AnimatePresence>
       </div>
 
       <div className="shroom-reaction-dock">
-        <AnimatePresence mode="wait">
           {!isExpanded ? (
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
+            <button
               onClick={() => setIsExpanded(true)}
               aria-label="Open reactions"
               aria-expanded={isExpanded}
               className="shroom-call-tool-button"
             >
               <SmilePlus className="w-6 h-6" />
-            </motion.button>
+            </button>
           ) : (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
+            <div
               className="shroom-reaction-menu"
             >
               {EMOJIS.map(emoji => (
@@ -101,9 +87,8 @@ export function EmojiReactions() {
               >
                 <X className="w-5 h-5" />
               </button>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </div>
     </>
   );

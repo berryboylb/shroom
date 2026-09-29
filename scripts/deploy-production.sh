@@ -8,6 +8,7 @@ database_url='postgres://postgres:postgres@postgres:5432/shroom?sslmode=disable'
 
 test -f "$env_file"
 test -f backend/migrations/009_meeting_approval.up.sql
+test -f backend/migrations/010_post_call_feedback.up.sql
 command -v curl >/dev/null
 "${compose[@]}" version >/dev/null
 
@@ -37,7 +38,7 @@ history_exists=$("${compose[@]}" exec -T postgres psql -XAt -U postgres -d shroo
 if [[ "$history_exists" == t ]]; then
   history_state=$("${compose[@]}" exec -T postgres psql -XAt -F : -U postgres -d shroom -c \
     'SELECT version, dirty FROM public.schema_migrations')
-  if [[ ! "$history_state" =~ ^(-?[0-9]+):f$ ]] || (( ${BASH_REMATCH[1]:-10} > 9 )); then
+  if [[ ! "$history_state" =~ ^(-?[0-9]+):f$ ]] || (( ${BASH_REMATCH[1]:-11} > 10 )); then
     echo "Unexpected or dirty migration history: $history_state" >&2
     exit 1
   fi
@@ -45,13 +46,14 @@ if [[ "$history_exists" == t ]]; then
   echo "Tracked schema version: $history_state"
 fi
 
-# All three migrations are safe to repeat. Run them in one transaction so a
+# These additive migrations are safe to repeat. Run them in one transaction so a
 # conflicting existing object or constraint leaves the old schema intact.
 {
   printf 'BEGIN;\n'
   cat backend/migrations/007_expand_room_id.up.sql \
       backend/migrations/008_add_google_auth.up.sql \
-      backend/migrations/009_meeting_approval.up.sql
+      backend/migrations/009_meeting_approval.up.sql \
+      backend/migrations/010_post_call_feedback.up.sql
   printf '\nCOMMIT;\n'
 } | "${compose[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U postgres -d shroom
 
@@ -70,7 +72,7 @@ if [[ "$history_exists" == t ]] && (( history_version >= 6 )); then
 else
   # Only baseline after the schema check above confirms the required objects.
   # force records a version; it does not execute SQL or delete existing data.
-  "${migrate[@]}" force 9
+  "${migrate[@]}" force 10
 fi
 
 "${compose[@]}" up -d --remove-orphans

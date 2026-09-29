@@ -29,6 +29,7 @@ vi.mock('./api/rooms', () => ({
   roomsApi: {
     createRoom: vi.fn(),
     joinRoom: vi.fn(),
+    sendFeedback: vi.fn(),
   },
 }));
 
@@ -167,6 +168,7 @@ describe('room entry', () => {
     expect(window.location.pathname).toBe('/');
     expect(sessionStorage.getItem('activeRoom')).toBeNull();
     expect(roomsApi.joinRoom).not.toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: 'How was your call?' })).toBeInTheDocument();
   });
 
   it('does not treat a saved session for another room as permission to skip pre-join', async () => {

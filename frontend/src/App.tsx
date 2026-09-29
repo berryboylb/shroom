@@ -6,6 +6,7 @@ import { authApi } from './api/auth';
 
 const Room = lazy(() => import('./components/Room').then(m => ({ default: m.Room })));
 const PreJoinScreen = lazy(() => import('./components/PreJoinScreen').then(m => ({ default: m.PreJoinScreen })));
+const PostCallFeedback = lazy(() => import('./components/PostCallFeedback').then(m => ({ default: m.PostCallFeedback })));
 import { Loader2, Video, Link as LinkIcon, ArrowRight, AlertCircle, Sparkles, LogIn, LogOut, ShieldCheck } from 'lucide-react';
 import { ShroomLogo } from './components/ShroomLogo';
 
@@ -91,6 +92,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
   const [waitingRoom, setWaitingRoom] = useState<{roomId: string; e2eeKey?: string} | null>(null);
   const [secureMeeting, setSecureMeeting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [feedbackRoomId, setFeedbackRoomId] = useState<string | null>(null);
   const autoRejoinAttempted = useRef<string | null>(null);
   const isPageUnloading = useRef(false);
   const intentionallyLeaving = useRef(false);
@@ -264,6 +266,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
             autoRejoinAttempted.current = activeRoom.id;
             sessionStorage.removeItem('activeRoom');
             window.history.replaceState({}, '', '/');
+            setFeedbackRoomId(activeRoom.id);
             setActiveRoom(null);
           }}
           onDisconnected={() => {
@@ -498,6 +501,7 @@ function MeetingApp({ currentPath }: { currentPath: string }) {
           </div>
         </div>
       </section>
+      {feedbackRoomId && <Suspense fallback={null}><PostCallFeedback roomId={feedbackRoomId} onDismiss={() => setFeedbackRoomId(null)} /></Suspense>}
     </main>
   );
 }

@@ -122,6 +122,7 @@ func New(cfg *config.Config) *Server {
 		r.Get("/api/rooms/{id}/requests", roomHandler.HandlePendingJoins)
 		r.Post("/api/rooms/{id}/requests/decision", roomHandler.HandleDecideJoin)
 		r.Post("/api/rooms/{id}/requests/cancel", roomHandler.HandleCancelJoin)
+		r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/api/rooms/{id}/feedback", roomHandler.HandleFeedback)
 		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/api/link-preview", roomHandler.HandleLinkPreview)
 		r.With(httprate.LimitByIP(20, 1*time.Minute)).Get("/api/link-preview/image", roomHandler.HandleLinkPreviewImage)
 		r.Post("/api/telemetry", roomHandler.HandleTelemetry)

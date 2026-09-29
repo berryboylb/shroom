@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Video, VideoOff, ArrowRight, Settings2, SwitchCamera } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ArrowRight, Settings2, SwitchCamera, Volume2 } from 'lucide-react';
 import { ShroomLogo } from './ShroomLogo';
-import { unlockCallAudio } from '../utils/audio';
+import { playSpeakerTest, unlockCallAudio } from '../utils/audio';
 
 interface Props {
   roomId: string;
@@ -22,6 +21,7 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
   
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<string>('');
   const [selectedAudio, setSelectedAudio] = useState<string>('');
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -30,7 +30,10 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState('');
+  const [micLevel, setMicLevel] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const meterAudioRef = useRef<AudioContext | null>(null);
+  const speakerSelectionSupported = typeof window.AudioContext !== 'undefined' && 'setSinkId' in window.AudioContext.prototype;
 
   // Isolate stream dependency to avoid infinite loops
   const streamRef = useRef<MediaStream | null>(null);
@@ -50,6 +53,8 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
       const devices = await navigator.mediaDevices.enumerateDevices();
       setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
       setAudioDevices(devices.filter(d => d.kind === 'audioinput'));
+      setSpeakerDevices(devices.filter(d => d.kind === 'audiooutput'));
+      setError('');
       
       if (!vid) setSelectedVideo(s.getVideoTracks()[0]?.getSettings().deviceId || '');
       if (face) {
@@ -59,7 +64,7 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
       if (!aud) setSelectedAudio(s.getAudioTracks()[0]?.getSettings().deviceId || '');
     } catch (e) {
       console.warn(e);
-      setError('Failed to switch device.');
+      setError('Camera or microphone unavailable. Check browser permissions, then retry.');
     }
   };
 
@@ -94,6 +99,31 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
     }
   }, [micEnabled, camEnabled, stream]);
 
+  useEffect(() => {
+    const audioTrack = stream?.getAudioTracks()[0];
+    if (!audioTrack || typeof window.AudioContext === 'undefined') return;
+    const context = new window.AudioContext();
+    meterAudioRef.current = context;
+    const source = context.createMediaStreamSource(new MediaStream([audioTrack]));
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    const samples = new Uint8Array(analyser.fftSize);
+    void context.resume().catch(() => {});
+    const timer = window.setInterval(() => {
+      analyser.getByteTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) sum += ((sample - 128) / 128) ** 2;
+      setMicLevel(Math.min(100, Math.round(Math.sqrt(sum / samples.length) * 500)));
+    }, 100);
+    return () => {
+      window.clearInterval(timer);
+      source.disconnect();
+      meterAudioRef.current = null;
+      void context.close();
+    };
+  }, [stream]);
+
   // Attach stream to video element when it renders
   useEffect(() => {
     if (videoRef.current && stream && camEnabled) {
@@ -109,10 +139,8 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
 
   return (
     <div className="shroom-prejoin shroom-prejoin-shell min-h-[100dvh] font-sans">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="shroom-prejoin-card relative z-10 flex w-full max-w-2xl flex-col items-center"
+      <div
+        className="shroom-prejoin-card shroom-panel-enter relative z-10 flex w-full max-w-2xl flex-col items-center"
       >
         {inAppBrowserWarning && (
           <div className="w-full bg-amber-500/20 border border-amber-500/50 text-amber-400 p-3 rounded-xl mb-6 text-sm font-medium flex items-center justify-between">
@@ -191,13 +219,14 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
           </div>
         </div>
 
-        <AnimatePresence>
+        <div className="shroom-audio-check" aria-label="Audio check">
+          <div className="shroom-mic-check"><span>Microphone</span><div role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={micEnabled ? micLevel : 0}><span style={{ width: `${micEnabled ? micLevel : 0}%` }} /></div></div>
+          <button type="button" onClick={() => { void meterAudioRef.current?.resume().catch(() => {}); playSpeakerTest(); }}><Volume2 size={16} aria-hidden="true" /> Test speaker</button>
+        </div>
+
           {showSettings && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="shroom-settings w-full rounded-2xl p-4 mb-6 overflow-hidden"
+            <div
+              className="shroom-settings shroom-panel-enter w-full rounded-2xl p-4 mb-6 overflow-hidden"
             >
               <div className="flex flex-col gap-4">
                 <div>
@@ -226,14 +255,24 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
                     ))}
                   </select>
                 </div>
+                {speakerSelectionSupported && speakerDevices.length > 1 && <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Speaker</label>
+                  <select aria-label="Speaker" defaultValue={localStorage.getItem('shroom-audio-output') || ''} onChange={event => {
+                    if (event.target.value) localStorage.setItem('shroom-audio-output', event.target.value);
+                    else localStorage.removeItem('shroom-audio-output');
+                  }} className="shroom-input w-full text-sm">
+                    <option value="">System default</option>
+                    {speakerDevices.filter(device => device.deviceId && device.deviceId !== 'default').map(device => <option key={device.deviceId} value={device.deviceId}>{device.label || 'Speaker'}</option>)}
+                  </select>
+                </div>}
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {error && (
           <p role="alert" className="text-amber-400 text-sm font-medium mb-6 bg-amber-400/10 py-2 px-4 rounded-lg w-full text-center">
             {error}
+            <button type="button" className="ml-2 underline" onClick={() => void loadMedia(selectedVideo, selectedAudio)}>Retry</button>
           </p>
         )}
 
@@ -273,7 +312,7 @@ export function PreJoinScreen({ roomId, displayName, encrypted = false, encrypti
             <span>{joining ? 'Joining...' : 'Join room'}</span><ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

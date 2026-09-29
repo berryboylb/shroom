@@ -18,6 +18,19 @@ func NewRepository(db *db.DB) *Repository {
 	return &Repository{db: db}
 }
 
+func (r *Repository) SaveFeedback(ctx context.Context, roomID, participantID string, feedback Feedback) error {
+	if r == nil || r.db == nil || r.db.Pool == nil {
+		return ErrStorageUnavailable
+	}
+	_, err := r.db.Pool.Exec(ctx, `
+		INSERT INTO post_call_feedback (room_id, participant_id, rating, issue, note)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5)
+		ON CONFLICT (room_id, participant_id) DO UPDATE
+		SET rating = EXCLUDED.rating, issue = EXCLUDED.issue, note = EXCLUDED.note
+	`, roomID, participantID, feedback.Rating, feedback.Issue, feedback.Note)
+	return err
+}
+
 type Room struct {
 	ID               string
 	Title            string
